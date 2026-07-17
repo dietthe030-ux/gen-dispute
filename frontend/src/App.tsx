@@ -1,0 +1,196 @@
+import React from 'react'
+import { useGenDispute } from './hooks/useGenDispute'
+import { WalletConnect } from './components/WalletConnect'
+import { CreateOrderForm } from './components/CreateOrderForm'
+import { OrderStatus } from './components/OrderStatus'
+import { DisputeForm } from './components/DisputeForm'
+import { DisputeResult } from './components/DisputeResult'
+import { TransactionProgress } from './components/TransactionProgress'
+import { SiteHeader } from './components/SiteHeader'
+
+const App: React.FC = () => {
+  const {
+    account,
+    uiState,
+    txHash,
+    errorMessage,
+    orderState,
+    connectWallet,
+    disconnectWallet,
+    createOrder,
+    openDispute,
+    isRetrying,
+    setIsRetrying,
+  } = useGenDispute()
+
+  const handleOrderCreate = async (
+    buyer: string,
+    listingUrl: string,
+    listingSnapshot: string,
+    description: string,
+    amount: string
+  ) => {
+    await createOrder(buyer, listingUrl, listingSnapshot, description, amount)
+  }
+
+  const handleDisputeSubmit = async (reason: string, url1: string, url2: string) => {
+    await openDispute(reason, url1, url2)
+  }
+
+  const isConnected = !!account
+  const isSubmitting = uiState === 'SUBMITTING' || uiState === 'WAITING_FOR_CONSENSUS'
+  const hasOrder = !!orderState
+
+  const connectedAddress = account?.address
+  const buyerAddress = orderState?.buyer
+  const sellerAddress = orderState?.seller
+
+  const isBuyer = !!(connectedAddress && buyerAddress && connectedAddress.toLowerCase() === buyerAddress.toLowerCase())
+  const isSeller = !!(connectedAddress && sellerAddress && connectedAddress.toLowerCase() === sellerAddress.toLowerCase())
+
+  const showProgress =
+    isConnected &&
+    (uiState === 'SUBMITTING' ||
+      uiState === 'WAITING_FOR_CONSENSUS' ||
+      uiState === 'ACCEPTED' ||
+      uiState === 'FINALIZED' ||
+      uiState === 'PAID_OUT' ||
+      uiState === 'ERROR' ||
+      uiState === 'UNDETERMINED' ||
+      (uiState === 'RETRY_AVAILABLE' && !!txHash))
+
+  return (
+    <div className="app-container">
+      <a href="#main-content" className="skip-link">
+        Skip to main content
+      </a>
+
+      <SiteHeader activePage="app" />
+
+      <main id="main-content" className="grid-main">
+        <h1 className="sr-only">GenDispute escrow application</h1>
+        <aside className="col-sidebar" aria-label="Wallet and transaction status">
+          <WalletConnect
+            address={connectedAddress || null}
+            uiState={uiState}
+            onConnect={connectWallet}
+            onDisconnect={disconnectWallet}
+          />
+
+          {isConnected && orderState && (
+            <div className="card role-info-card">
+              <h2 className="card-title">Your role</h2>
+              {isBuyer ? (
+                <div className="role-badge role-buyer">Buyer</div>
+              ) : isSeller ? (
+                <div className="role-badge role-seller">Seller</div>
+              ) : (
+                <div className="role-badge role-observer">Observer</div>
+              )}
+              <p className="role-desc">
+                {isBuyer
+                  ? 'You can open a dispute while the order is open.'
+                  : isSeller
+                    ? 'You created this order. Escrow stays locked until settlement.'
+                    : 'This wallet is not a party to this order.'}
+              </p>
+            </div>
+          )}
+
+          {showProgress && (
+            <TransactionProgress state={uiState} errorMessage={errorMessage} />
+          )}
+
+          {uiState === 'ERROR' && errorMessage && !showProgress && (
+            <div className="alert alert-danger" role="alert">
+              {errorMessage}
+            </div>
+          )}
+        </aside>
+
+        <div className="col-content">
+          {!isConnected ? (
+            <section className="card hero-card" aria-labelledby="welcome-heading">
+              <h2 id="welcome-heading">Hold payment until the item checks out</h2>
+              <p>
+                Seller deposits GEN into escrow. Buyer can dispute with public evidence.
+                Validators settle a 0%, 50%, or 100% refund.
+              </p>
+              <ol className="hero-steps">
+                <li>
+                  <span>1</span>
+                  Connect wallet on Studionet
+                </li>
+                <li>
+                  <span>2</span>
+                  Create escrow or open a dispute
+                </li>
+                <li>
+                  <span>3</span>
+                  Wait for consensus and payout
+                </li>
+              </ol>
+              <button type="button" onClick={connectWallet} className="btn btn-primary btn-lg">
+                Connect wallet
+              </button>
+            </section>
+          ) : !hasOrder ? (
+            <CreateOrderForm onSubmit={handleOrderCreate} isLoading={isSubmitting} />
+          ) : (
+            <div className="order-workspace">
+              <OrderStatus order={orderState} />
+
+              {isBuyer &&
+                (orderState.status === 'OPEN' ||
+                  (orderState.status === 'UNDETERMINED' && isRetrying)) && (
+                  <DisputeForm
+                    onSubmit={async (reason, url1, url2) => {
+                      setIsRetrying(false)
+                      await handleDisputeSubmit(reason, url1, url2)
+                    }}
+                    isLoading={isSubmitting}
+                    attempts={orderState.disputeAttempts}
+                  />
+                )}
+
+              {(orderState.status === 'RESOLVED' ||
+                orderState.status === 'PAID_OUT' ||
+                (orderState.status === 'UNDETERMINED' && !isRetrying)) && (
+                <DisputeResult
+                  order={orderState}
+                  txHash={txHash}
+                  onRetry={() => {
+                    setIsRetrying(true)
+                  }}
+                  canRetry={isBuyer && orderState.disputeAttempts < 2}
+                />
+              )}
+
+              {isSeller && orderState.status === 'OPEN' && (
+                <div className="card alert-card info">
+                  <h3>Waiting on buyer</h3>
+                  <p>
+                    Escrow is locked in the contract. The buyer may confirm delivery or open a
+                    dispute if the item does not match the listing.
+                  </p>
+                </div>
+              )}
+
+              {!isBuyer && !isSeller && (
+                <div className="card alert-card warning">
+                  <h3>View only</h3>
+                  <p>
+                    Your address is not the buyer or seller on this order. You can inspect state
+                    but cannot submit actions.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </main>
+    </div>
+  )
+}
+
+export default App
