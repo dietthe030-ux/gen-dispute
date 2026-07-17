@@ -12,7 +12,7 @@ The repository contains a multi-order contract and frontend release candidate:
 - A user must enter an order ID to inspect an existing order, or create a new order.
 - `open_dispute` always targets an explicit order ID.
 
-The multi-order contract is deployed on Studionet at [`0xef5663Ae20d8604bc57Bcf87c691ffc64c73CAA7`](https://explorer-studio.genlayer.com/address/0xef5663Ae20d8604bc57Bcf87c691ffc64c73CAA7). A direct `get_order_count()` read returned `0` during integration verification. The public Vercel app remains on the earlier release until its environment and production deployment are updated.
+The multi-order contract is deployed on Studionet at [`0xef5663Ae20d8604bc57Bcf87c691ffc64c73CAA7`](https://explorer-studio.genlayer.com/address/0xef5663Ae20d8604bc57Bcf87c691ffc64c73CAA7). A direct `get_order_count()` read returned `0` during integration verification. The multi-order frontend is live at [gen-dispute.vercel.app](https://gen-dispute.vercel.app).
 
 ## Contract flow
 
@@ -88,11 +88,13 @@ Verified results for this release candidate:
 
 The legacy Studionet contract is `0xA10b4CCe4721ba86Ce902080a044BA5d465cEaB8`. It contains an open escrow and remains untouched.
 
-To complete the multi-order frontend release:
+The multi-order frontend release is configured with the verified address. Production verification confirmed:
 
-1. Configure the verified multi-order address in Vercel.
-2. Run the complete local verification suite.
-3. Merge and deploy the frontend through the verified `dietthe030-ux` GitHub and Vercel accounts.
-4. Run a two-wallet production smoke test for order creation, explicit ID lookup, observer access, and buyer-only dispute authorization.
+1. GitHub `main` and Vercel Production were deployed through `dietthe030-ux`.
+2. `/` and `/docs` returned HTTP 200.
+3. The production bundle contained the new address and no legacy address.
+4. The live UI exposed the explicit order lookup and multi-order contract methods.
+
+A funded two-wallet production transaction test has not yet been recorded.
 
 No guessed or placeholder address may be used.

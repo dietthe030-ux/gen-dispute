@@ -1,6 +1,6 @@
 # Project Roadmap
 
-This roadmap reflects evidence reviewed on July 17, 2026. It distinguishes the legacy single-order production release, the deployed multi-order Studionet contract, and the multi-order frontend that is awaiting production environment migration. It does not claim users, traction, partnerships, or live dispute settlement without evidence.
+This roadmap reflects evidence reviewed on July 17, 2026. It distinguishes the preserved legacy contract from the deployed multi-order Studionet contract and production frontend. It does not claim users, traction, partnerships, or live dispute settlement without evidence.
 
 ## V1 Delivered
 
@@ -23,7 +23,7 @@ The Intelligent Contract holds escrow, enforces participant access, preserves th
 | Area | Current evidence |
 | --- | --- |
 | Public source | [dietthe030-ux/gen-dispute](https://github.com/dietthe030-ux/gen-dispute) contains the deployed V1 source history. |
-| Live web app | [gen-dispute.vercel.app](https://gen-dispute.vercel.app) is the public Vercel application connected to the GitHub repository. |
+| Live web app | [gen-dispute.vercel.app](https://gen-dispute.vercel.app) serves the multi-order frontend from the `dietthe030-ux/gen-dispute` main branch. `/` and `/docs` returned HTTP 200; the production bundle contained the multi-order address and no legacy address. |
 | Legacy Studionet contract | [`0xA10b4CCe4721ba86Ce902080a044BA5d465cEaB8`](https://explorer-studio.genlayer.com/address/0xA10b4CCe4721ba86Ce902080a044BA5d465cEaB8) is the verified V1 instance. |
 | Multi-order Studionet contract | [`0xef5663Ae20d8604bc57Bcf87c691ffc64c73CAA7`](https://explorer-studio.genlayer.com/address/0xef5663Ae20d8604bc57Bcf87c691ffc64c73CAA7) accepted a direct `get_order_count()` read and returned `0` during integration verification. |
 | Verified Studionet write | The [`create_order` transaction](https://explorer-studio.genlayer.com/tx/0x6d2ddeeaefb0ac249a9471d1b2d03f2df7e53a4f1c833678fbc6d9c49fa2d2ab) finalized successfully with 1.50 GEN. |
@@ -33,7 +33,7 @@ The Intelligent Contract holds escrow, enforces participant access, preserves th
 
 ### Honest boundary between V1 and the release candidate
 
-The new Studionet contract implements the multi-order design using `DynArray[Order]` and explicit `order_id` reads and writes. The corresponding frontend implements manual order lookup and account-change selection clearing. The contract is deployed and readable, but the public Vercel frontend is not yet claimed as migrated to it.
+The new Studionet contract implements the multi-order design using `DynArray[Order]` and explicit `order_id` reads and writes. The production frontend implements manual order lookup and account-change selection clearing and is configured for the new deployment.
 
 The legacy contract contains an open escrow and was not upgraded. Its incompatible storage layout remains isolated from the new deployment.
 
@@ -105,13 +105,13 @@ Current evidence is separated from future targets.
 
 ## Future Updates
 
-### Phase 1: Complete and validate the multi-order release
+### Phase 1: Validate live multi-order transactions
 
-- **Problem:** The multi-order contract is deployed, but the production frontend environment and live transaction flow are not yet migrated and verified.
+- **Problem:** The contract and frontend are deployed, but no funded multi-order creation, dispute, or payout has been recorded on the new instance.
 - **User value:** Users can create multiple isolated escrows and intentionally open a known order by ID.
-- **Changes:** Configure the verified address in Vercel; deploy the tested frontend; run two-wallet and observer smoke tests; verify order creation, lookup, authorization, dispute, and settlement evidence.
+- **Changes:** Run supervised two-wallet and observer smoke tests; verify order creation, lookup, authorization, dispute, and settlement evidence.
 - **Integrations:** GenLayer Studio, Explorer, GitHub, and Vercel.
-- **Conditions:** Correct GitHub/Vercel account verification, production environment migration, passing checks, and continued protection of the legacy escrow.
+- **Conditions:** Funded Studionet test wallets, agreed evidence fixtures, passing checks, and continued protection of the legacy escrow.
 - **Success:** Multiple live orders retain isolated state; wallet switching clears selection; unauthorized disputes fail; all production routes and checks pass.
 
 ### Phase 2: Complete escrow lifecycle and recovery

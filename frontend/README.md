@@ -30,6 +30,8 @@ The verified multi-order Studionet deployment is:
 
 Configure that exact address in the gitignored local `.env` and the matching Vercel environment. Do not configure the legacy single-order address for this frontend release. Do not commit `.env`; `.env.example` intentionally contains no address.
 
+Production: [gen-dispute.vercel.app](https://gen-dispute.vercel.app)
+
 ## Commands
 
 ```bash
