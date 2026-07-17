@@ -1,63 +1,49 @@
-# GenDispute React Frontend
+# GenDispute Frontend
 
-The GenDispute frontend is built with React 19, TypeScript, and Vite. Its dark editorial interface keeps wallet state, escrow actions, consensus progress, and settlement outcomes visually distinct without decorative UI noise.
+The frontend is a React 19, TypeScript, and Vite interface for the GenDispute multi-order Intelligent Contract.
 
-> [!WARNING]
-> **Configuration Blocker:**
-> The verified Studionet contract address is configured locally in the gitignored `.env`. Keep `.env.example` address-free and never commit guessed or placeholder addresses.
+## User flow
 
----
+1. Connect an injected browser wallet.
+2. Approve or add GenLayer Studionet.
+3. Enter a known order ID to inspect it, or create a new escrow order.
+4. The selected order determines whether the wallet is the Buyer, Seller, or Observer.
+5. Only the selected order's buyer sees the dispute action.
+6. Transaction progress continues through accepted consensus and finalization.
+
+Changing accounts clears the selected order. The interface never assumes that a connected wallet owns or should view order `0`.
 
 ## Routes
 
-- `/` - wallet connection, escrow creation, order state, dispute submission, consensus progress, and settlement.
-- `/docs` - project overview, workflow, technology, payout tiers, security model, and contract method reference.
+- `/` — wallet, order lookup, escrow creation, dispute, and settlement interface.
+- `/docs` — product, architecture, security, and multi-order contract documentation.
 
-`vercel.json` rewrites direct requests to `index.html`, so opening or refreshing `/docs` works after deployment.
+`vercel.json` rewrites direct route requests to the Vite entry point.
 
----
+## Configuration
 
-## Technical Specifications and Features
+Create a local `.env` only after a real multi-order contract has been deployed and verified:
 
-- **Direct Wallet Provider Integration**: Removes insecure private key persistence. Interacts directly with browser wallets (`window.ethereum`) via the EIP-1193 interface.
-- **Studionet Chain Auto-Switching**: Automatically prompts the user to switch to or add the GenLayer Studionet network (`chainId: 61999` or `0xf22f` in hex, RPC: `https://studio.genlayer.com/api`).
-- **Dynamic Role Checks**: Dynamically parses the connected address to assign Buyer, Seller, or Observer views.
-- **Strict Input Validation**: Rejects malformed amounts, zero/negative inputs, or decimal strings exceeding 18 decimals before submitting transactions.
-- **SDK Type Safety**: Uses the receipt fields and status enums exposed by the installed `genlayer-js` version. Transactions wait for accepted consensus and finalization before the UI reports completion.
-- **Trustworthy Listing Snapshots**: Integrates a `FIXTURE_REGISTRY` to prevent arbitrary text input in listing snapshots, autofilling matching metadata presets for the user.
-- **Responsive Product Documentation**: Shares the application header and design tokens while giving `/docs` its own long-form layout and semantic section structure.
+```text
+VITE_CONTRACT_ADDRESS=<verified new Studionet contract address>
+```
 
----
+Do not configure the legacy single-order address for this frontend release. Do not commit `.env`; `.env.example` intentionally contains no address.
 
-## Available Commands
+## Commands
 
-### 1. Installation
-Install project dependencies:
 ```bash
 npm install
-```
-
-### 2. Development Server
-Run the local Vite development server:
-```bash
 npm run dev
-```
-
-### 3. Run Unit Tests (Vitest)
-Run the 24 unit tests covering the app, documentation page, and `useGenDispute` transaction handlers:
-```bash
-npx vitest run
-```
-
-### 4. Code Quality & Lint
-Run linter check (oxlint):
-```bash
+npm test -- --run
 npm run lint
-```
-
-### 5. TypeScript Compilation & Build
-Verify type compilation and bundle for production:
-```bash
-npx tsc -b
 npm run build
 ```
+
+Current verified results:
+
+- 27 frontend tests passed.
+- Lint completed with zero errors.
+- TypeScript compilation and Vite production build succeeded.
+
+The production build currently reports a non-blocking large-chunk warning.

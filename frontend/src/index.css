@@ -344,6 +344,57 @@ textarea {
   gap: var(--space-4);
 }
 
+.order-lookup {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(360px, 1.1fr);
+  align-items: end;
+  gap: var(--space-6);
+}
+
+.order-count {
+  display: inline-block;
+  margin-top: var(--space-3);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+}
+
+.order-lookup-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.order-lookup-form label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.order-lookup-actions {
+  display: grid;
+  grid-template-columns: minmax(100px, 1fr) auto auto;
+  gap: var(--space-2);
+}
+
+.order-lookup-actions input {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  color: var(--text);
+  background: var(--bg-sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  outline: none;
+  font-family: var(--font-mono);
+  font-size: 0.9375rem;
+}
+
+.order-lookup-actions input:focus-visible {
+  border-color: var(--border-focus);
+  box-shadow: var(--focus-ring);
+}
+
 /* ---------- Surfaces ---------- */
 
 .card,
@@ -1908,6 +1959,18 @@ textarea {
 
   .status-grid {
     grid-template-columns: 1fr;
+  }
+
+  .order-lookup {
+    grid-template-columns: 1fr;
+  }
+
+  .order-lookup-actions {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .order-lookup-actions input {
+    grid-column: 1 / -1;
   }
 
   .status-item.full-width {

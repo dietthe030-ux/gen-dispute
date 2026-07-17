@@ -8,6 +8,15 @@ vi.mock('./hooks/useGenDispute', () => ({
   useGenDispute: vi.fn(),
 }))
 
+const orderControls = (selectedOrderId: number | null = null) => ({
+  selectedOrderId,
+  orderCount: selectedOrderId === null ? 0 : 1,
+  isOrderLoading: false,
+  loadOrder: vi.fn(),
+  clearSelectedOrder: vi.fn(),
+  refreshOrderCount: vi.fn(),
+})
+
 describe('App Component', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -20,6 +29,7 @@ describe('App Component', () => {
       txHash: '',
       errorMessage: '',
       orderState: null,
+      ...orderControls(),
       connectWallet: vi.fn(),
       disconnectWallet: vi.fn(),
       createOrder: vi.fn(),
@@ -43,6 +53,7 @@ describe('App Component', () => {
       txHash: '',
       errorMessage: '',
       orderState: null,
+      ...orderControls(),
       connectWallet: vi.fn(),
       disconnectWallet: vi.fn(),
       createOrder: vi.fn(),
@@ -67,6 +78,7 @@ describe('App Component', () => {
       txHash: '',
       errorMessage: '',
       orderState: {
+        orderId: 0,
         seller: '0x1234567890123456789012345678901234567890',
         buyer: '0x81b637d8fcd2c6dac59ee6963113a1170de795e4',
         escrowAmount: BigInt(1.5 * 1e18),
@@ -82,6 +94,7 @@ describe('App Component', () => {
         outcome: 'NONE',
         lastError: '',
       },
+      ...orderControls(0),
       connectWallet: vi.fn(),
       disconnectWallet: vi.fn(),
       createOrder: vi.fn(),
@@ -94,7 +107,7 @@ describe('App Component', () => {
 
     render(<App />)
 
-    expect(screen.getByText('Order')).toBeInTheDocument()
+    expect(screen.getByText('Order #0')).toBeInTheDocument()
     expect(screen.getByText('Buyer')).toBeInTheDocument()
     expect(screen.getByText('Open dispute')).toBeInTheDocument()
   })
@@ -106,6 +119,7 @@ describe('App Component', () => {
       txHash: '',
       errorMessage: '',
       orderState: {
+        orderId: 0,
         seller: '0x1234567890123456789012345678901234567890',
         buyer: '0x81b637d8fcd2c6dac59ee6963113a1170de795e4',
         escrowAmount: BigInt(1.5 * 1e18),
@@ -121,6 +135,7 @@ describe('App Component', () => {
         outcome: 'NONE',
         lastError: '',
       },
+      ...orderControls(0),
       connectWallet: vi.fn(),
       disconnectWallet: vi.fn(),
       createOrder: vi.fn(),
@@ -133,7 +148,7 @@ describe('App Component', () => {
 
     render(<App />)
 
-    expect(screen.getByText('Order')).toBeInTheDocument()
+    expect(screen.getByText('Order #0')).toBeInTheDocument()
     expect(screen.getByText('Seller')).toBeInTheDocument()
     expect(screen.getByText('Waiting on buyer')).toBeInTheDocument()
     expect(screen.queryByText('Open dispute')).not.toBeInTheDocument()
@@ -149,6 +164,7 @@ describe('App Component', () => {
       txHash: '0xtxhash',
       errorMessage: '',
       orderState: {
+        orderId: 0,
         seller: '0x1234567890123456789012345678901234567890',
         buyer: '0x81b637d8fcd2c6dac59ee6963113a1170de795e4',
         escrowAmount: BigInt(1.5 * 1e18),
@@ -164,6 +180,7 @@ describe('App Component', () => {
         outcome: 'UNDETERMINED',
         lastError: 'Consensus output validation failed',
       },
+      ...orderControls(0),
       connectWallet: vi.fn(),
       disconnectWallet: vi.fn(),
       createOrder: vi.fn(),
@@ -192,6 +209,7 @@ describe('App Component', () => {
       txHash: '',
       errorMessage: '',
       orderState: {
+        orderId: 0,
         seller: '0x1234567890123456789012345678901234567890',
         buyer: '0x81b637d8fcd2c6dac59ee6963113a1170de795e4',
         escrowAmount: BigInt(1.5 * 1e18),
@@ -207,6 +225,7 @@ describe('App Component', () => {
         outcome: 'UNDETERMINED',
         lastError: 'Consensus output validation failed',
       },
+      ...orderControls(0),
       connectWallet: vi.fn(),
       disconnectWallet: vi.fn(),
       createOrder: vi.fn(),
@@ -249,6 +268,7 @@ describe('App Component', () => {
       txHash: '0xtxhash',
       errorMessage: '',
       orderState: {
+        orderId: 0,
         seller: '0x1234567890123456789012345678901234567890',
         buyer: '0x81b637d8fcd2c6dac59ee6963113a1170de795e4',
         escrowAmount: BigInt(1.5 * 1e18),
@@ -264,6 +284,7 @@ describe('App Component', () => {
         outcome: 'UNDETERMINED',
         lastError: 'Consensus output validation failed',
       },
+      ...orderControls(0),
       connectWallet: vi.fn(),
       disconnectWallet: vi.fn(),
       createOrder: vi.fn(),
@@ -291,6 +312,7 @@ describe('App Component', () => {
       txHash: '0xacceptedhash',
       errorMessage: pendingMessage,
       orderState: null,
+      ...orderControls(),
       connectWallet: vi.fn(),
       disconnectWallet: vi.fn(),
       createOrder: vi.fn(),
@@ -316,6 +338,7 @@ describe('App Component', () => {
       txHash: '0xfailedhash',
       errorMessage: 'Transaction execution reverted on-chain.',
       orderState: null,
+      ...orderControls(),
       connectWallet: vi.fn(),
       disconnectWallet: vi.fn(),
       createOrder: vi.fn(),
@@ -329,5 +352,35 @@ describe('App Component', () => {
     render(<App />)
 
     expect(screen.getByText('Transaction execution reverted on-chain.')).toBeInTheDocument()
+  })
+
+  it('does not select an existing order for a newly connected wallet', () => {
+    const loadOrder = vi.fn()
+    ;(useGenDispute as any).mockReturnValue({
+      account: { address: '0x9999999999999999999999999999999999999999' },
+      uiState: 'RETRY_AVAILABLE',
+      txHash: '',
+      errorMessage: '',
+      orderState: null,
+      ...orderControls(),
+      loadOrder,
+      connectWallet: vi.fn(),
+      disconnectWallet: vi.fn(),
+      createOrder: vi.fn(),
+      openDispute: vi.fn(),
+      refreshOrder: vi.fn(),
+      setUiState: vi.fn(),
+      isRetrying: false,
+      setIsRetrying: vi.fn(),
+    })
+
+    render(<App />)
+
+    expect(screen.queryByText(/Order #/)).not.toBeInTheDocument()
+    expect(screen.getByText('Create escrow order')).toBeInTheDocument()
+
+    fireEvent.change(screen.getByLabelText('Order ID'), { target: { value: '7' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Load order' }))
+    expect(loadOrder).toHaveBeenCalledWith(7)
   })
 })

@@ -57,8 +57,8 @@ export const DocsPage = () => {
             <span className="docs-kicker">Product documentation</span>
             <h1 id="docs-title">Escrow that waits for evidence.</h1>
             <p>
-              GenDispute holds GEN and lets validators settle item-not-as-described
-              claims from public evidence.
+              GenDispute holds GEN in independent order escrows and lets validators settle
+              item-not-as-described claims from public evidence.
             </p>
             <div className="docs-actions">
               <a className="btn btn-primary btn-lg" href="/">
@@ -154,11 +154,16 @@ export const DocsPage = () => {
           <div className="workflow-grid">
             <article>
               <h3>Create escrow</h3>
-              <p>The seller names the buyer, locks the listing snapshot, and deposits GEN.</p>
+              <p>
+                The seller names the buyer, locks the listing snapshot, deposits GEN, and
+                receives an order ID.
+              </p>
             </article>
             <article>
-              <h3>Preserve the terms</h3>
-              <p>The contract keeps the listing facts used by every later evaluation.</p>
+              <h3>Open by order ID</h3>
+              <p>
+                Any wallet may inspect a known order, while only its named participants can act.
+              </p>
             </article>
             <article>
               <h3>Submit public evidence</h3>
@@ -183,7 +188,10 @@ export const DocsPage = () => {
             <article>
               <span>Contract layer</span>
               <h3>Python Intelligent Contract</h3>
-              <p>Stores order state, controls access, validates outcomes, and settles GEN.</p>
+              <p>
+                Stores multiple isolated orders, controls access, validates outcomes, and
+                settles GEN.
+              </p>
             </article>
             <article>
               <span>Consensus layer</span>
@@ -245,21 +253,28 @@ export const DocsPage = () => {
         <section className="docs-section contract-section" aria-labelledby="contract-title">
           <div className="contract-reference">
             <h2 id="contract-title">Contract reference</h2>
-            <p>The current frontend is wired to the verified Studionet deployment below.</p>
+            <p>
+              The application reads the deployment configured for its current environment.
+              Each deployment exposes independent orders numbered from zero.
+            </p>
             <code>{CONTRACT_ADDRESS || 'Contract not configured'}</code>
           </div>
           <div className="method-reference" aria-label="Contract methods">
             <div>
-              <code>create_order(...)</code>
-              <span>Payable seller write</span>
+              <code>create_order(...) → order_id</code>
+              <span>Payable seller write; appends an isolated order</span>
             </div>
             <div>
-              <code>open_dispute(...)</code>
-              <span>Buyer evidence write</span>
+              <code>get_order_count()</code>
+              <span>Public order count read</span>
             </div>
             <div>
-              <code>get_order()</code>
-              <span>Public state read</span>
+              <code>get_order(order_id)</code>
+              <span>Public state read for one order</span>
+            </div>
+            <div>
+              <code>open_dispute(order_id, ...)</code>
+              <span>Buyer evidence write for one order</span>
             </div>
           </div>
         </section>

@@ -49,7 +49,7 @@ export const OrderStatus: React.FC<OrderStatusProps> = ({ order }) => {
       <div className="card-header-flex">
         <div>
           <h2 id="order-status-title" className="card-title">
-            Order
+            Order #{order.orderId}
           </h2>
           {statusHint(order.status) && (
             <p className="card-lede">{statusHint(order.status)}</p>

@@ -37,6 +37,29 @@ const successfulReceipt = (status: 'ACCEPTED' | 'FINALIZED' = 'FINALIZED') => ({
   },
 })
 
+const contractOrder = (status: 'OPEN' | 'PAID_OUT' | 'UNDETERMINED' = 'OPEN') => ({
+  order_id: 0,
+  status,
+  seller: '0xseller',
+  buyer: '0xbuyer',
+  escrow_amount: 1000n,
+  listing_url: 'https://listing.url',
+  item_description: 'descr',
+  dispute_attempts: status === 'OPEN' ? 0 : 1,
+  dispute_reason: status === 'OPEN' ? '' : 'broken',
+  evidence_urls: [],
+  refund_tier: status === 'PAID_OUT' ? 50 : null,
+  buyer_payout: status === 'PAID_OUT' ? 500n : null,
+  seller_payout: status === 'PAID_OUT' ? 500n : null,
+  outcome:
+    status === 'PAID_OUT'
+      ? 'PARTIAL_MISMATCH'
+      : status === 'UNDETERMINED'
+        ? 'UNDETERMINED'
+        : 'NONE',
+  last_error: status === 'UNDETERMINED' ? 'Consensus failure' : '',
+})
+
 describe('useGenDispute Hook', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -127,6 +150,60 @@ describe('useGenDispute Hook', () => {
       expect(result.current.account).toBeNull()
       expect(result.current.uiState).toBe('ERROR')
       expect(result.current.errorMessage).toBe('User rejected chain switch')
+    })
+
+    it('clears the selected order when the wallet account changes', async () => {
+      const mockRequest = (window as any).ethereum.request
+      mockRequest.mockImplementation(async ({ method }: any) => {
+        if (method === 'eth_chainId') return '0xf22f'
+        if (method === 'eth_requestAccounts') return ['0x1122334455667788990011223344556677889900']
+        return null
+      })
+      vi.mocked(client.readContract).mockImplementation(async ({ functionName }: any) =>
+        functionName === 'get_order_count' ? 1 : contractOrder()
+      )
+
+      const { result } = renderHook(() => useGenDispute())
+
+      await act(async () => {
+        await result.current.connectWallet()
+        await result.current.loadOrder(0)
+      })
+      expect(result.current.selectedOrderId).toBe(0)
+      expect(result.current.orderState?.orderId).toBe(0)
+
+      const accountChangeHandler = (window as any).ethereum.on.mock.calls.find(
+        ([eventName]: [string]) => eventName === 'accountsChanged'
+      )?.[1]
+
+      act(() => {
+        accountChangeHandler(['0x9999999999999999999999999999999999999999'])
+      })
+
+      expect(result.current.selectedOrderId).toBeNull()
+      expect(result.current.orderState).toBeNull()
+    })
+  })
+
+  describe('order lookup', () => {
+    it('loads only the explicitly requested order ID', async () => {
+      vi.mocked(client.readContract).mockImplementation(async ({ functionName, args }: any) => {
+        if (functionName === 'get_order_count') return 8
+        return { ...contractOrder(), order_id: args[0] }
+      })
+
+      const { result } = renderHook(() => useGenDispute())
+      await act(async () => {
+        await result.current.loadOrder(7)
+      })
+
+      expect(client.readContract).toHaveBeenCalledWith({
+        address: '0xcontractaddress',
+        functionName: 'get_order',
+        args: [7],
+      })
+      expect(result.current.selectedOrderId).toBe(7)
+      expect(result.current.orderState?.orderId).toBe(7)
     })
   })
 
@@ -339,27 +416,18 @@ describe('useGenDispute Hook', () => {
       mockWaitForReceipt.mockResolvedValue(successfulReceipt() as any)
 
       const mockReadContract = vi.mocked(client.readContract)
-      mockReadContract.mockResolvedValue({
-        status: 'PAID_OUT',
-        seller: '0xseller',
-        buyer: '0xbuyer',
-        escrow_amount: 1000n,
-        listing_url: 'https://listing.url',
-        item_description: 'descr',
-        dispute_attempts: 1,
-        dispute_reason: 'broken',
-        evidence_urls: [],
-        refund_tier: 50,
-        buyer_payout: 500n,
-        seller_payout: 500n,
-        outcome: 'PARTIAL_MISMATCH',
-        last_error: '',
-      } as any)
+      mockReadContract.mockImplementation(async ({ functionName }: any) =>
+        functionName === 'get_order_count' ? 1 : contractOrder('PAID_OUT')
+      )
 
       const { result } = renderHook(() => useGenDispute())
 
       await act(async () => {
         await result.current.connectWallet()
+      })
+
+      await act(async () => {
+        await result.current.loadOrder(0)
       })
 
       await act(async () => {
@@ -369,7 +437,7 @@ describe('useGenDispute Hook', () => {
       expect(mockWriteContract).toHaveBeenCalledWith({
         address: '0xcontractaddress',
         functionName: 'open_dispute',
-        args: ['reason', 'https://evidence', ''],
+        args: [0, 'reason', 'https://evidence', ''],
         value: 0n,
         account: { address: '0x1122334455667788990011223344556677889900', type: 'json-rpc' },
       })
@@ -385,27 +453,18 @@ describe('useGenDispute Hook', () => {
       mockWaitForReceipt.mockResolvedValue(successfulReceipt() as any)
 
       const mockReadContract = vi.mocked(client.readContract)
-      mockReadContract.mockResolvedValue({
-        status: 'UNDETERMINED',
-        seller: '0xseller',
-        buyer: '0xbuyer',
-        escrow_amount: 1000n,
-        listing_url: 'https://listing.url',
-        item_description: 'descr',
-        dispute_attempts: 1,
-        dispute_reason: 'broken',
-        evidence_urls: [],
-        refund_tier: null,
-        buyer_payout: null,
-        seller_payout: null,
-        outcome: 'UNDETERMINED',
-        last_error: 'Consensus failure',
-      } as any)
+      mockReadContract.mockImplementation(async ({ functionName }: any) =>
+        functionName === 'get_order_count' ? 1 : contractOrder('UNDETERMINED')
+      )
 
       const { result } = renderHook(() => useGenDispute())
 
       await act(async () => {
         await result.current.connectWallet()
+      })
+
+      await act(async () => {
+        await result.current.loadOrder(0)
       })
 
       await act(async () => {
@@ -418,11 +477,19 @@ describe('useGenDispute Hook', () => {
     it('handles wallet transaction signing rejection', async () => {
       const mockWriteContract = vi.mocked(client.writeContract)
       mockWriteContract.mockRejectedValue(new Error('User rejected signing'))
+      const mockReadContract = vi.mocked(client.readContract)
+      mockReadContract.mockImplementation(async ({ functionName }: any) =>
+        functionName === 'get_order_count' ? 1 : contractOrder()
+      )
 
       const { result } = renderHook(() => useGenDispute())
 
       await act(async () => {
         await result.current.connectWallet()
+      })
+
+      await act(async () => {
+        await result.current.loadOrder(0)
       })
 
       await act(async () => {

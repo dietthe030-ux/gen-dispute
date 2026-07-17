@@ -164,12 +164,33 @@ export const parseGenAmount = (amountStr: string): bigint => {
   return val
 }
 
+const toOrderState = (order: any): OrderState => ({
+  orderId: Number(order.order_id),
+  seller: order.seller,
+  buyer: order.buyer,
+  escrowAmount: BigInt(order.escrow_amount),
+  listingUrl: order.listing_url,
+  itemDescription: order.item_description,
+  status: order.status,
+  disputeAttempts: Number(order.dispute_attempts),
+  disputeReason: order.dispute_reason,
+  evidenceUrls: order.evidence_urls || [],
+  refundTier: order.refund_tier !== null ? Number(order.refund_tier) : null,
+  buyerPayout: order.buyer_payout !== null ? BigInt(order.buyer_payout) : null,
+  sellerPayout: order.seller_payout !== null ? BigInt(order.seller_payout) : null,
+  outcome: order.outcome,
+  lastError: order.last_error,
+})
+
 export const useGenDispute = () => {
   const [account, setAccount] = useState<{ address: Address } | null>(null)
   const [uiState, setUiState] = useState<UIState>('DISCONNECTED')
   const [txHash, setTxHash] = useState<string>('')
   const [errorMessage, setErrorMessage] = useState<string>('')
   const [orderState, setOrderState] = useState<OrderState | null>(null)
+  const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null)
+  const [orderCount, setOrderCount] = useState<number | null>(null)
+  const [isOrderLoading, setIsOrderLoading] = useState<boolean>(false)
   const [isRetrying, setIsRetrying] = useState<boolean>(false)
 
   // Request network switch/add flow
@@ -228,6 +249,8 @@ export const useGenDispute = () => {
       }
 
       setAccount({ address: accounts[0] as Address })
+      setSelectedOrderId(null)
+      setOrderState(null)
       setUiState('RETRY_AVAILABLE')
     } catch (e: any) {
       setUiState('ERROR')
@@ -238,6 +261,8 @@ export const useGenDispute = () => {
   const disconnectWallet = useCallback(() => {
     setAccount(null)
     setOrderState(null)
+    setSelectedOrderId(null)
+    setOrderCount(null)
     setUiState('DISCONNECTED')
   }, [])
 
@@ -248,8 +273,16 @@ export const useGenDispute = () => {
       const handleAccounts = (accounts: string[]) => {
         if (accounts.length > 0) {
           setAccount({ address: accounts[0] as Address })
+          setSelectedOrderId(null)
+          setOrderState(null)
+          setIsRetrying(false)
+          setErrorMessage('')
+          setUiState('RETRY_AVAILABLE')
         } else {
           setAccount(null)
+          setSelectedOrderId(null)
+          setOrderState(null)
+          setOrderCount(null)
           setUiState('DISCONNECTED')
         }
       }
@@ -270,48 +303,107 @@ export const useGenDispute = () => {
     }
   }, [])
 
-  const refreshOrder = useCallback(async () => {
-    if (!CONTRACT_ADDRESS) return
-    try {
-      const order = await client.readContract({
-        address: CONTRACT_ADDRESS,
-        functionName: 'get_order',
-        args: [],
-      }) as any
+  const refreshOrderCount = useCallback(async () => {
+    if (!CONTRACT_ADDRESS) {
+      setOrderCount(null)
+      return null
+    }
 
-      if (order && order.status !== 'NONE') {
-        setOrderState({
-          seller: order.seller,
-          buyer: order.buyer,
-          escrowAmount: BigInt(order.escrow_amount),
-          listingUrl: order.listing_url,
-          itemDescription: order.item_description,
-          status: order.status,
-          disputeAttempts: Number(order.dispute_attempts),
-          disputeReason: order.dispute_reason,
-          evidenceUrls: order.evidence_urls || [],
-          refundTier: order.refund_tier !== null ? Number(order.refund_tier) : null,
-          buyerPayout: order.buyer_payout !== null ? BigInt(order.buyer_payout) : null,
-          sellerPayout: order.seller_payout !== null ? BigInt(order.seller_payout) : null,
-          outcome: order.outcome,
-          lastError: order.last_error,
-        })
-      } else {
-        setOrderState(null)
+    try {
+      const count = Number(await client.readContract({
+        address: CONTRACT_ADDRESS,
+        functionName: 'get_order_count',
+        args: [],
+      }))
+      if (!Number.isSafeInteger(count) || count < 0) {
+        throw new Error('Contract returned an invalid order count')
       }
-    } catch (e: any) {
-      console.error('Failed to read contract state:', e)
+      setOrderCount(count)
+      return count
+    } catch (error) {
+      console.error('Failed to read order count:', error)
+      setOrderCount(null)
+      return null
     }
   }, [])
 
-  // Poll order state when connected
+  const readOrder = useCallback(async (orderId: number) => {
+    const order = await client.readContract({
+      address: CONTRACT_ADDRESS,
+      functionName: 'get_order',
+      args: [orderId],
+    }) as any
+    return toOrderState(order)
+  }, [])
+
+  const refreshOrder = useCallback(async (orderIdOverride?: number) => {
+    const orderId = orderIdOverride ?? selectedOrderId
+    if (!CONTRACT_ADDRESS || orderId === null) return
+    try {
+      setOrderState(await readOrder(orderId))
+    } catch (e: any) {
+      console.error('Failed to read contract state:', e)
+      if (orderIdOverride !== undefined) throw e
+    }
+  }, [readOrder, selectedOrderId])
+
+  const loadOrder = useCallback(async (orderId: number) => {
+    if (!Number.isSafeInteger(orderId) || orderId < 0) {
+      setUiState('ERROR')
+      setErrorMessage('Order ID must be a non-negative whole number')
+      return
+    }
+    if (!CONTRACT_ADDRESS) {
+      setUiState('ERROR')
+      setErrorMessage('Contract address not configured')
+      return
+    }
+
+    setIsOrderLoading(true)
+    setErrorMessage('')
+    try {
+      const order = await readOrder(orderId)
+      setSelectedOrderId(orderId)
+      setOrderState(order)
+      setIsRetrying(false)
+      setUiState('RETRY_AVAILABLE')
+    } catch (error: any) {
+      setSelectedOrderId(null)
+      setOrderState(null)
+      setUiState('ERROR')
+      setErrorMessage(
+        String(error?.message || '').includes('Order does not exist')
+          ? `Order #${orderId} does not exist on this contract`
+          : error?.message || `Unable to load order #${orderId}`
+      )
+    } finally {
+      setIsOrderLoading(false)
+    }
+  }, [readOrder])
+
+  const clearSelectedOrder = useCallback(() => {
+    setSelectedOrderId(null)
+    setOrderState(null)
+    setIsRetrying(false)
+    setErrorMessage('')
+    setUiState(account ? 'RETRY_AVAILABLE' : 'DISCONNECTED')
+  }, [account])
+
+  // Read only the explicitly selected order. A wallet switch never inherits
+  // another wallet's last-viewed order.
   useEffect(() => {
-    if (account && CONTRACT_ADDRESS) {
+    if (account && CONTRACT_ADDRESS && selectedOrderId !== null) {
       refreshOrder()
       const interval = setInterval(refreshOrder, 5000)
       return () => clearInterval(interval)
     }
-  }, [account, refreshOrder])
+  }, [account, selectedOrderId, refreshOrder])
+
+  useEffect(() => {
+    if (account && CONTRACT_ADDRESS) {
+      refreshOrderCount()
+    }
+  }, [account, refreshOrderCount])
 
   const createOrder = useCallback(async (
     buyerAddress: string,
@@ -361,7 +453,12 @@ export const useGenDispute = () => {
 
       const finalized = await waitForAcceptedAndFinalized(hash, async () => {
         setUiState('ACCEPTED')
-        await refreshOrder()
+        const count = await refreshOrderCount()
+        if (count !== null && count > 0) {
+          const createdOrderId = count - 1
+          setSelectedOrderId(createdOrderId)
+          await refreshOrder(createdOrderId)
+        }
       })
 
       if (finalized) {
@@ -371,12 +468,17 @@ export const useGenDispute = () => {
         setErrorMessage(FINALIZATION_PENDING_MESSAGE)
         setUiState('ACCEPTED')
       }
-      await refreshOrder()
+      const count = await refreshOrderCount()
+      if (count !== null && count > 0) {
+        const createdOrderId = count - 1
+        setSelectedOrderId(createdOrderId)
+        await refreshOrder(createdOrderId)
+      }
     } catch (e: any) {
       setUiState('ERROR')
       setErrorMessage(e.message || 'Transaction failed')
     }
-  }, [account, refreshOrder])
+  }, [account, refreshOrder, refreshOrderCount])
 
   const openDispute = useCallback(async (reason: string, evidenceUrl1: string, evidenceUrl2: string = '') => {
     if (!account) {
@@ -389,6 +491,11 @@ export const useGenDispute = () => {
       setErrorMessage('Contract address not configured')
       return
     }
+    if (selectedOrderId === null) {
+      setUiState('ERROR')
+      setErrorMessage('Select an order before opening a dispute')
+      return
+    }
 
     setUiState('SUBMITTING')
     setErrorMessage('')
@@ -399,7 +506,7 @@ export const useGenDispute = () => {
       const hash = await client.writeContract({
         address: CONTRACT_ADDRESS,
         functionName: 'open_dispute',
-        args: [reason, evidenceUrl1, evidenceUrl2],
+        args: [selectedOrderId, reason, evidenceUrl1, evidenceUrl2],
         account: { address: account.address, type: 'json-rpc' },
         value: 0n,
       })
@@ -424,7 +531,7 @@ export const useGenDispute = () => {
       const order = await client.readContract({
         address: CONTRACT_ADDRESS,
         functionName: 'get_order',
-        args: [],
+        args: [selectedOrderId],
       }) as any
 
       if (order.status === 'PAID_OUT' || order.status === 'RESOLVED') {
@@ -443,7 +550,7 @@ export const useGenDispute = () => {
       setUiState('ERROR')
       setErrorMessage(e.message || 'Transaction failed')
     }
-  }, [account, refreshOrder])
+  }, [account, refreshOrder, selectedOrderId])
 
   return {
     account,
@@ -451,11 +558,17 @@ export const useGenDispute = () => {
     txHash,
     errorMessage,
     orderState,
+    selectedOrderId,
+    orderCount,
+    isOrderLoading,
     connectWallet,
     disconnectWallet,
     createOrder,
     openDispute,
+    loadOrder,
+    clearSelectedOrder,
     refreshOrder,
+    refreshOrderCount,
     setUiState,
     isRetrying,
     setIsRetrying,

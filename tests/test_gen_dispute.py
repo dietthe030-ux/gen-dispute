@@ -15,7 +15,7 @@ def test_create_order_positive_escrow(direct_deploy, direct_vm, direct_alice, di
             "Test Item"
         )
         
-    order = contract.get_order()
+    order = contract.get_order(0)
     assert order["status"] == "OPEN"
     assert order["seller"] == direct_alice
     assert order["buyer"] == direct_bob
@@ -23,6 +23,117 @@ def test_create_order_positive_escrow(direct_deploy, direct_vm, direct_alice, di
     assert order["listing_url"] == "https://listing.url"
     assert order["listing_snapshot"] == "Vintage Rolex Submariner watch in excellent condition"
     assert order["item_description"] == "Test Item"
+    assert order["order_id"] == 0
+    assert contract.get_order_count() == 1
+
+def test_multiple_orders_have_isolated_state(direct_deploy, direct_vm, direct_alice, direct_bob, direct_charlie):
+    contract = direct_deploy("contracts/gen_dispute.py")
+
+    with direct_vm.prank(direct_alice):
+        direct_vm.value = 1000
+        first_order_id = contract.create_order(
+            direct_bob,
+            "https://listing.url",
+            "Vintage Rolex Submariner watch in excellent condition",
+            "First item"
+        )
+
+    with direct_vm.prank(direct_alice):
+        direct_vm.value = 2500
+        second_order_id = contract.create_order(
+            direct_charlie,
+            "https://listing.url/rolex_v1",
+            "Version A: Rolex watch including original box and papers",
+            "Second item"
+        )
+
+    assert first_order_id == 0
+    assert second_order_id == 1
+    assert contract.get_order_count() == 2
+
+    first_order = contract.get_order(0)
+    second_order = contract.get_order(1)
+
+    assert first_order["buyer"] == direct_bob
+    assert first_order["escrow_amount"] == 1000
+    assert first_order["item_description"] == "First item"
+    assert first_order["status"] == "OPEN"
+
+    assert second_order["buyer"] == direct_charlie
+    assert second_order["escrow_amount"] == 2500
+    assert second_order["item_description"] == "Second item"
+    assert second_order["status"] == "OPEN"
+
+def test_dispute_settlement_does_not_modify_other_order(
+    direct_deploy, direct_vm, direct_alice, direct_bob, direct_charlie
+):
+    contract = direct_deploy("contracts/gen_dispute.py")
+
+    with direct_vm.prank(direct_alice):
+        direct_vm.value = 1000
+        contract.create_order(
+            direct_bob,
+            "https://listing.url",
+            "Vintage Rolex Submariner watch in excellent condition",
+            "Disputed item"
+        )
+
+    with direct_vm.prank(direct_alice):
+        direct_vm.value = 2500
+        contract.create_order(
+            direct_charlie,
+            "https://listing.url/rolex_v1",
+            "Version A: Rolex watch including original box and papers",
+            "Untouched item"
+        )
+
+    direct_vm.mock_web(
+        "https://evidence.url",
+        {"status": 200, "body": "The received watch matches the listing"}
+    )
+    direct_vm.mock_llm(r".*", json.dumps({
+        "item_identity": "MATCH",
+        "condition": "MATCH",
+        "included_items": "MATCH",
+        "evidence_sufficient": True,
+        "refund_tier": 0,
+        "reason_code": "MATCHES_DESCRIPTION",
+        "summary": "The item matches the listing.",
+        "listing_facts": ["Vintage watch"],
+        "evidence_facts": ["Matching vintage watch received"]
+    }))
+
+    def gl_call_hook(vm, request):
+        if "EthSend" in request:
+            return {"ok": None}
+        return None
+
+    direct_vm._gl_call_hook = gl_call_hook
+
+    with direct_vm.prank(direct_bob):
+        contract.open_dispute(0, "Verify the delivered item", "https://evidence.url")
+
+    assert direct_vm.run_validator() is True
+
+    settled_order = contract.get_order(0)
+    untouched_order = contract.get_order(1)
+    assert settled_order["status"] == "PAID_OUT"
+    assert settled_order["seller_payout"] == 1000
+    assert untouched_order["status"] == "OPEN"
+    assert untouched_order["escrow_amount"] == 2500
+    assert untouched_order["dispute_attempts"] == 0
+    assert untouched_order["buyer_payout"] == 0
+    assert untouched_order["seller_payout"] == 0
+
+def test_unknown_order_id_is_rejected(direct_deploy, direct_vm, direct_alice):
+    contract = direct_deploy("contracts/gen_dispute.py")
+
+    with direct_vm.expect_revert("Order does not exist"):
+        contract.get_order(999)
+
+    with direct_vm.expect_revert("Order does not exist"):
+        with direct_vm.prank(direct_alice):
+            contract.open_dispute(999, "reason", "https://evidence.url")
 
 def test_reject_zero_escrow(direct_deploy, direct_vm, direct_alice, direct_bob):
     contract = direct_deploy("contracts/gen_dispute.py")
@@ -90,7 +201,7 @@ def test_buyer_access_control(direct_deploy, direct_vm, direct_alice, direct_bob
         
     with direct_vm.expect_revert("Only buyer can open dispute"):
         with direct_vm.prank(direct_charlie):
-            contract.open_dispute("reasons", "https://evidence.url")
+            contract.open_dispute(0, "reasons", "https://evidence.url")
 
 def test_dispute_resolved_tier_0(direct_deploy, direct_vm, direct_alice, direct_bob):
     contract = direct_deploy("contracts/gen_dispute.py")
@@ -129,11 +240,11 @@ def test_dispute_resolved_tier_0(direct_deploy, direct_vm, direct_alice, direct_
     direct_vm._gl_call_hook = gl_call_hook
     
     with direct_vm.prank(direct_bob):
-        contract.open_dispute("item matches description", "https://evidence.url")
+        contract.open_dispute(0, "item matches description", "https://evidence.url")
         
     assert direct_vm.run_validator() is True
     
-    order = contract.get_order()
+    order = contract.get_order(0)
     assert order["status"] == "PAID_OUT"
     assert order["refund_tier"] == 0
     assert order["buyer_payout"] == 0
@@ -181,11 +292,11 @@ def test_dispute_resolved_tier_50(direct_deploy, direct_vm, direct_alice, direct
     direct_vm._gl_call_hook = gl_call_hook
     
     with direct_vm.prank(direct_bob):
-        contract.open_dispute("no box and papers", "https://evidence.url")
+        contract.open_dispute(0, "no box and papers", "https://evidence.url")
         
     assert direct_vm.run_validator() is True
     
-    order = contract.get_order()
+    order = contract.get_order(0)
     assert order["status"] == "PAID_OUT"
     assert order["refund_tier"] == 50
     assert order["buyer_payout"] == 500
@@ -236,11 +347,11 @@ def test_dispute_resolved_tier_100(direct_deploy, direct_vm, direct_alice, direc
     direct_vm._gl_call_hook = gl_call_hook
     
     with direct_vm.prank(direct_bob):
-        contract.open_dispute("totally wrong watch", "https://evidence.url")
+        contract.open_dispute(0, "totally wrong watch", "https://evidence.url")
         
     assert direct_vm.run_validator() is True
     
-    order = contract.get_order()
+    order = contract.get_order(0)
     assert order["status"] == "PAID_OUT"
     assert order["refund_tier"] == 100
     assert order["buyer_payout"] == 1000
@@ -267,11 +378,11 @@ def test_undetermined_consensus_failure(direct_deploy, direct_vm, direct_alice, 
     direct_vm.mock_llm(r".*", "malformed JSON")
     
     with direct_vm.prank(direct_bob):
-        contract.open_dispute("broken dial", "https://evidence.url")
+        contract.open_dispute(0, "broken dial", "https://evidence.url")
         
     assert direct_vm.run_validator() is True
     
-    order = contract.get_order()
+    order = contract.get_order(0)
     assert order["status"] == "UNDETERMINED"
     assert order["dispute_attempts"] == 1
     assert order["buyer_payout"] == 0
@@ -295,26 +406,26 @@ def test_retry_limit_rejection(direct_deploy, direct_vm, direct_alice, direct_bo
     # First attempt: UNDETERMINED
     direct_vm.mock_llm(r".*", "malformed JSON")
     with direct_vm.prank(direct_bob):
-        contract.open_dispute("broken", "https://evidence.url")
+        contract.open_dispute(0, "broken", "https://evidence.url")
     assert direct_vm.run_validator() is True
     
-    order = contract.get_order()
+    order = contract.get_order(0)
     assert order["status"] == "UNDETERMINED"
     assert order["dispute_attempts"] == 1
     
     # Second attempt: UNDETERMINED again
     with direct_vm.prank(direct_bob):
-        contract.open_dispute("still broken", "https://evidence.url")
+        contract.open_dispute(0, "still broken", "https://evidence.url")
     assert direct_vm.run_validator() is True
     
-    order = contract.get_order()
+    order = contract.get_order(0)
     assert order["status"] == "UNDETERMINED"
     assert order["dispute_attempts"] == 2
     
     # Third attempt: Rejects because cap reached
     with direct_vm.expect_revert("Max retry cap reached"):
         with direct_vm.prank(direct_bob):
-            contract.open_dispute("one more time", "https://evidence.url")
+            contract.open_dispute(0, "one more time", "https://evidence.url")
 
 def test_resolved_is_terminal(direct_deploy, direct_vm, direct_alice, direct_bob):
     contract = direct_deploy("contracts/gen_dispute.py")
@@ -344,16 +455,16 @@ def test_resolved_is_terminal(direct_deploy, direct_vm, direct_alice, direct_bob
     direct_vm.mock_llm(r".*", json.dumps(llm_output))
     
     with direct_vm.prank(direct_bob):
-        contract.open_dispute("reasons", "https://evidence.url")
+        contract.open_dispute(0, "reasons", "https://evidence.url")
         
     assert direct_vm.run_validator() is True
     
-    order = contract.get_order()
+    order = contract.get_order(0)
     assert order["status"] == "PAID_OUT"
     
     with direct_vm.expect_revert("Order cannot be disputed"):
         with direct_vm.prank(direct_bob):
-            contract.open_dispute("reasons again", "https://evidence.url")
+            contract.open_dispute(0, "reasons again", "https://evidence.url")
 
 def test_validator_rejects_malformed_leader(direct_deploy, direct_vm, direct_alice, direct_bob):
     contract = direct_deploy("contracts/gen_dispute.py")
@@ -371,10 +482,10 @@ def test_validator_rejects_malformed_leader(direct_deploy, direct_vm, direct_ali
     direct_vm.mock_llm(r".*", "This is not JSON at all")
     
     with direct_vm.prank(direct_bob):
-        contract.open_dispute("reasons", "https://evidence.url")
+        contract.open_dispute(0, "reasons", "https://evidence.url")
         
     assert direct_vm.run_validator() is True
-    order = contract.get_order()
+    order = contract.get_order(0)
     assert order["status"] == "UNDETERMINED"
 
 def test_validator_rejects_unsupported_tier(direct_deploy, direct_vm, direct_alice, direct_bob):
@@ -405,7 +516,7 @@ def test_validator_rejects_unsupported_tier(direct_deploy, direct_vm, direct_ali
     direct_vm.mock_llm(r".*", json.dumps(llm_output))
     
     with direct_vm.prank(direct_bob):
-        contract.open_dispute("reasons", "https://evidence.url")
+        contract.open_dispute(0, "reasons", "https://evidence.url")
         
     assert direct_vm.run_validator() is False
 
@@ -437,7 +548,7 @@ def test_validator_rejects_contradictory_verdict(direct_deploy, direct_vm, direc
     direct_vm.mock_llm(r".*", json.dumps(llm_output))
     
     with direct_vm.prank(direct_bob):
-        contract.open_dispute("reasons", "https://evidence.url")
+        contract.open_dispute(0, "reasons", "https://evidence.url")
         
     assert direct_vm.run_validator() is False
 
@@ -469,7 +580,7 @@ def test_validator_rejects_insufficient_evidence(direct_deploy, direct_vm, direc
     direct_vm.mock_llm(r".*", json.dumps(llm_output))
     
     with direct_vm.prank(direct_bob):
-        contract.open_dispute("reasons", "https://evidence.url")
+        contract.open_dispute(0, "reasons", "https://evidence.url")
         
     assert direct_vm.run_validator() is False
 
@@ -513,7 +624,7 @@ def test_listing_snapshot_immutability(direct_deploy, direct_vm, direct_alice, d
     
     # 2. Open dispute
     with direct_vm.prank(direct_bob):
-        contract.open_dispute("missing box", "https://evidence.url")
+        contract.open_dispute(0, "missing box", "https://evidence.url")
         
     # 3. Dispute evaluation executes
     assert direct_vm.run_validator() is True
@@ -537,7 +648,7 @@ def test_missing_evidence(direct_deploy, direct_vm, direct_alice, direct_bob):
         
     with direct_vm.expect_revert("At least one evidence URL is required"):
         with direct_vm.prank(direct_bob):
-            contract.open_dispute("reasons", "")
+            contract.open_dispute(0, "reasons", "")
 
 
 def test_public_evidence_fixtures_match_contract_listing():

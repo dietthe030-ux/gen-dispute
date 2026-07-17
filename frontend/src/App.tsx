@@ -7,6 +7,7 @@ import { DisputeForm } from './components/DisputeForm'
 import { DisputeResult } from './components/DisputeResult'
 import { TransactionProgress } from './components/TransactionProgress'
 import { SiteHeader } from './components/SiteHeader'
+import { OrderLookup } from './components/OrderLookup'
 
 const App: React.FC = () => {
   const {
@@ -15,10 +16,15 @@ const App: React.FC = () => {
     txHash,
     errorMessage,
     orderState,
+    selectedOrderId,
+    orderCount,
+    isOrderLoading,
     connectWallet,
     disconnectWallet,
     createOrder,
     openDispute,
+    loadOrder,
+    clearSelectedOrder,
     isRetrying,
     setIsRetrying,
   } = useGenDispute()
@@ -134,56 +140,68 @@ const App: React.FC = () => {
                 Connect wallet
               </button>
             </section>
-          ) : !hasOrder ? (
-            <CreateOrderForm onSubmit={handleOrderCreate} isLoading={isSubmitting} />
           ) : (
             <div className="order-workspace">
-              <OrderStatus order={orderState} />
+              <OrderLookup
+                selectedOrderId={selectedOrderId}
+                orderCount={orderCount}
+                isLoading={isOrderLoading}
+                onLoad={loadOrder}
+                onCreateNew={clearSelectedOrder}
+              />
 
-              {isBuyer &&
-                (orderState.status === 'OPEN' ||
-                  (orderState.status === 'UNDETERMINED' && isRetrying)) && (
-                  <DisputeForm
-                    onSubmit={async (reason, url1, url2) => {
-                      setIsRetrying(false)
-                      await handleDisputeSubmit(reason, url1, url2)
-                    }}
-                    isLoading={isSubmitting}
-                    attempts={orderState.disputeAttempts}
-                  />
-                )}
+              {!hasOrder ? (
+                <CreateOrderForm onSubmit={handleOrderCreate} isLoading={isSubmitting} />
+              ) : (
+                <>
+                  <OrderStatus order={orderState} />
 
-              {(orderState.status === 'RESOLVED' ||
-                orderState.status === 'PAID_OUT' ||
-                (orderState.status === 'UNDETERMINED' && !isRetrying)) && (
-                <DisputeResult
-                  order={orderState}
-                  txHash={txHash}
-                  onRetry={() => {
-                    setIsRetrying(true)
-                  }}
-                  canRetry={isBuyer && orderState.disputeAttempts < 2}
-                />
-              )}
+                  {isBuyer &&
+                    (orderState.status === 'OPEN' ||
+                      (orderState.status === 'UNDETERMINED' && isRetrying)) && (
+                      <DisputeForm
+                        onSubmit={async (reason, url1, url2) => {
+                          setIsRetrying(false)
+                          await handleDisputeSubmit(reason, url1, url2)
+                        }}
+                        isLoading={isSubmitting}
+                        attempts={orderState.disputeAttempts}
+                      />
+                    )}
 
-              {isSeller && orderState.status === 'OPEN' && (
-                <div className="card alert-card info">
-                  <h3>Waiting on buyer</h3>
-                  <p>
-                    Escrow is locked in the contract. The buyer may confirm delivery or open a
-                    dispute if the item does not match the listing.
-                  </p>
-                </div>
-              )}
+                  {(orderState.status === 'RESOLVED' ||
+                    orderState.status === 'PAID_OUT' ||
+                    (orderState.status === 'UNDETERMINED' && !isRetrying)) && (
+                    <DisputeResult
+                      order={orderState}
+                      txHash={txHash}
+                      onRetry={() => {
+                        setIsRetrying(true)
+                      }}
+                      canRetry={isBuyer && orderState.disputeAttempts < 2}
+                    />
+                  )}
 
-              {!isBuyer && !isSeller && (
-                <div className="card alert-card warning">
-                  <h3>View only</h3>
-                  <p>
-                    Your address is not the buyer or seller on this order. You can inspect state
-                    but cannot submit actions.
-                  </p>
-                </div>
+                  {isSeller && orderState.status === 'OPEN' && (
+                    <div className="card alert-card info">
+                      <h3>Waiting on buyer</h3>
+                      <p>
+                        Escrow is locked in the contract. The buyer may open a dispute if the
+                        item does not match the listing.
+                      </p>
+                    </div>
+                  )}
+
+                  {!isBuyer && !isSeller && (
+                    <div className="card alert-card warning">
+                      <h3>View only</h3>
+                      <p>
+                        Your address is not the buyer or seller on this order. You can inspect
+                        state but cannot submit actions.
+                      </p>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           )}

@@ -1,126 +1,99 @@
-# GenDispute Escrow & AI-Consensus Dispute Resolution
+# GenDispute
 
-GenDispute is a decentralized e-commerce escrow and dispute resolution protocol designed for **GenLayer Studionet**. It allows a buyer and seller to establish an escrow agreement for a physical item sale, which can be automatically resolved via consensus-driven AI validators if a dispute arises.
+GenDispute is a GenLayer Studionet escrow prototype for item-not-as-described disputes. A seller creates an independent order, deposits native GEN, and names a buyer. If the buyer disputes the delivery, GenLayer validators evaluate public evidence and the Intelligent Contract applies a deterministic 0%, 50%, or 100% buyer refund.
 
-> [!WARNING]
-> **Studionet integration is configured locally.** The verified deployed contract address is stored only in the gitignored `frontend/.env`; no placeholder address is committed to source.
+## Current release status
 
----
+The repository contains a multi-order contract and frontend release candidate:
 
-## Architecture & Workflow
+- Every order receives a numeric `order_id`.
+- `DynArray[Order]` keeps escrow, participants, evidence, attempts, and settlement state isolated per order.
+- The frontend never selects order `0` merely because a wallet connected or changed.
+- A user must enter an order ID to inspect an existing order, or create a new order.
+- `open_dispute` always targets an explicit order ID.
 
-1. **Order Creation (`create_order`)**:
-   - The seller deposits native GEN into the intelligent contract.
-   - Specifies the buyer's address, listing URL (static description source), verified listing snapshot, and item description.
-   - The contract verifies the listing snapshot against the hardcoded `FIXTURE_REGISTRY` database. Only registered/trusted URLs and matching content snapshots are allowed.
-   - Escrow remains locked in the contract, transitioning the state to `OPEN`.
+The public Vercel app and Studionet address may still be running the earlier single-order release until the multi-order contract is deployed as a new instance and its real address is configured. Do not upgrade the legacy contract: it contains an open escrow and its storage layout is incompatible with this release.
 
-2. **Dispute Claims (`open_dispute`)**:
-   - The buyer can raise a dispute if the item received does not match the description.
-   - Provides a claim reason and up to two evidence page URLs (e.g., photo inspection reports).
-   - Escalates the order status to `DISPUTE_PENDING` and triggers a non-deterministic evaluation.
+## Contract flow
 
-3. **AI-Consensus Resolution (`leader_fn` and `validator_fn`)**:
-   - The **Leader** reads the stored listing snapshot and fetches the evidence pages.
-   - Determines the appropriate **Refund Tier** (0% for matches, 50% for partial mismatch, 100% for material mismatch).
-   - The **Validators** run the same logic deterministically, validating the format, types, and consistency rules of the proposed verdict.
-   - If consensus is reached, the escrow is split and distributed accordingly using proxies to perform native transfers to the buyer and seller EOAs (`PAID_OUT`).
-   - If consensus fails or a validation error occurs, the order transitions to `UNDETERMINED`. The escrow remains locked, and the buyer is allowed **exactly one retry** with updated evidence. A second failure locks the escrow permanently.
+1. `create_order(buyer, listing_url, listing_snapshot, item_description) -> order_id`
+   - Requires a positive native GEN value.
+   - Validates the buyer, URL scheme, and fixture-backed listing snapshot.
+   - Appends a new isolated order in `OPEN` state.
+2. `get_order_count()`
+   - Returns the number of orders in the contract.
+3. `get_order(order_id)`
+   - Returns public state for exactly one order.
+4. `open_dispute(order_id, reason, evidence_url_1, evidence_url_2)`
+   - May be called only by that order's buyer.
+   - Fetches public evidence through nondeterministic execution.
+   - Validates the proposed verdict and pays 0%, 50%, or 100% of escrow to the buyer; the seller receives the remainder.
+   - An undetermined result keeps that order's escrow locked and permits at most one retry.
 
----
+## Frontend routes
 
-## Directory Structure
+- `/` — wallet connection, order lookup, escrow creation, participant-specific actions, consensus progress, and settlement.
+- `/docs` — project purpose, architecture, security model, payout tiers, and contract method reference.
+
+The frontend uses an injected EIP-1193 wallet and requests GenLayer Studionet:
+
+- Chain ID: `61999` (`0xf22f`)
+- RPC: `https://studio.genlayer.com/api`
+
+The real contract address belongs only in the gitignored `frontend/.env`. The committed `frontend/.env.example` remains address-free.
+
+## Project structure
 
 ```text
 gen-dispute/
-├── contracts/
-│   └── gen_dispute.py         # GenLayer Intelligent Contract (Python)
+├── contracts/gen_dispute.py
 ├── fixtures/
-│   ├── fixture_listing.html           # Baseline vintage Rolex Submariner description
-│   ├── fixture_evidence_match.html    # Matches listing (Tier 0)
-│   ├── fixture_evidence_partial.html  # Dial repaint, missing papers (Tier 50)
-│   ├── fixture_evidence_full_mismatch.html # casio received (Tier 100)
-│   └── fixture_prompt_injection.html  # Adversarial prompt override test
 ├── frontend/
-│   ├── src/
-│   │   ├── components/        # Premium UI Components (Wallet, Forms, Results, Progress)
-│   │   ├── config/            # GenLayer client config on Studionet
-│   │   ├── hooks/             # Custom useGenDispute React hook
-│   │   │   ├── useGenDispute.ts
-│   │   │   └── useGenDispute.test.tsx # Hook transaction/SDK mocks (13 test cases)
-│   │   ├── types/             # TypeScript types
-│   │   ├── App.tsx            # App container (Access checks based on MetaMask addresses)
-│   │   ├── App.test.tsx       # Frontend App component tests (7 test cases)
-│   │   └── index.css          # Sleek glassmorphic dark-mode design system
-│   ├── vite.config.ts         # Vitest & React build settings
-│   ├── tsconfig.json          # TS config
-│   └── .env.example           # Contract address placeholder
-├── tests/
-│   └── test_gen_dispute.py    # Python contract unit tests (18 test cases)
-└── README.md                  # Setup & Integration instructions
+│   ├── src/components/
+│   ├── src/hooks/
+│   ├── src/types/
+│   └── vercel.json
+├── tests/test_gen_dispute.py
+├── SPEC.md
+└── ROADMAP.md
 ```
 
----
+## Verification
 
-## Technical Specifications
+Contract tests:
 
-### Intelligent Contract (`contracts/gen_dispute.py`)
-- Built using GenVM Python SDK with version dependencies.
-- Implements a hardcoded `FIXTURE_REGISTRY` database matching verified listing URLs to their expected page content snapshots, ensuring that snapshots are trustworthy and cannot be arbitrary.
-- Emits native GEN payouts to EOAs securely via `@gl.evm.contract_interface` wrapper.
-
-### React Frontend (`frontend/`)
-- Powered by `Vite`, `React`, and `TypeScript`.
-- Uses real browser wallet integrations (`window.ethereum`) and switches/adds the Studionet network (Chain ID `61999` / `0xf22f`) automatically.
-- Participant roles (Buyer, Seller, Observer) are derived automatically from the connected MetaMask address.
-- Uses `parseEther` and regex checks for exact amount input validation.
-- Treats `ACCEPTED` as a valid consensus milestone, continues polling for `FINALIZED`, and validates the execution data exposed by the current Studionet receipt shape.
-- Provides two frontend routes:
-  - `/` for wallet connection, escrow creation, order state, and disputes.
-  - `/docs` for the project overview, technology, security model, payout tiers, and contract reference.
-- Uses `frontend/vercel.json` to keep direct navigation to `/docs` working after a Vercel deployment.
-
----
-
-## Verification & Testing
-
-### 1. Local / Direct-Mode Tests (Pytest)
-These tests execute on the local GenVM test environment, mocking network calls, LLM responses, and transaction execution.
-Run command:
 ```bash
 gltest tests/test_gen_dispute.py
 ```
-*Result: 19 passed tests.*
 
-### 2. Frontend Unit Tests (Vitest)
-These tests mock the browser wallet provider and the GenLayer client, validating the hook transaction handlers and App UI.
-Run command:
+Verified result for this release candidate: `22 passed`.
+
+Frontend checks:
+
 ```bash
 cd frontend
-npx vitest run
-```
-*Result: 24 passed tests across the app, docs page, and transaction hook.*
-
-### 3. Frontend Lint & Typecheck
-Verify code quality and type compilation:
-```bash
-cd frontend
+npm test -- --run
 npm run lint
-npx tsc -b
-```
-
-### 4. Build Check
-Build client assets for production:
-```bash
-cd frontend
 npm run build
 ```
 
----
+Verified results for this release candidate:
 
-## Deployment & Live Verification Notes
+- `27 passed` frontend tests.
+- Lint completed with zero errors.
+- TypeScript compilation and the Vite production build completed successfully.
+- Vite reports a non-blocking warning for a JavaScript chunk larger than 500 kB.
 
-> [!IMPORTANT]
-> **Local Testing vs. Studionet Network:**
-> - Unit testing and frontend test suites run locally and in mocked mode.
-> - A live deploy to Studionet requires configured RPC connections and MetaMask credentials. Do not attempt Studionet deployment or configuration until authorized by Codex.
+## Deployment safety
+
+The legacy Studionet contract is `0xA10b4CCe4721ba86Ce902080a044BA5d465cEaB8`. It contains an open escrow and must remain untouched.
+
+To release the multi-order version:
+
+1. Deploy `contracts/gen_dispute.py` as a new Studionet contract instance.
+2. Verify the new address and methods in GenLayer Studio or Explorer.
+3. Configure the exact new address in local and Vercel environment variables.
+4. Run a two-wallet smoke test for order creation, explicit ID lookup, observer access, and buyer-only dispute authorization.
+5. Only then merge and deploy the multi-order frontend.
+
+No guessed or placeholder address may be used.

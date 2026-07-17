@@ -12,6 +12,7 @@ describe('DocsPage', () => {
     expect(screen.getByText('From listing to settlement')).toBeInTheDocument()
     expect(screen.getByText('Built for verifiable judgment')).toBeInTheDocument()
     expect(screen.getByText('Contract reference')).toBeInTheDocument()
+    expect(screen.getByText('get_order(order_id)')).toBeInTheDocument()
   })
 
   it('links back to the app and marks Docs as the current page', () => {

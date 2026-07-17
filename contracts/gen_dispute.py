@@ -2,6 +2,7 @@
 from genlayer import *
 from genlayer.gl import evm
 import genlayer.gl.vm as vm
+from dataclasses import dataclass
 
 @evm.contract_interface
 class EVMRecipient:
@@ -17,50 +18,45 @@ FIXTURE_REGISTRY = {
     "https://listing.url/vintage_watch": "Vintage Rolex Submariner watch in excellent condition",
 }
 
-class GenDispute(gl.Contract):
+@allow_storage
+@dataclass
+class Order:
+    order_id: u256
     seller: Address
     buyer: Address
     escrow_amount: u256
     listing_url: str
     listing_snapshot: str
     item_description: str
-    
-    status: str # "NONE", "OPEN", "DISPUTE_PENDING", "RESOLVED", "UNDETERMINED", "PAID_OUT"
+    status: str
     dispute_attempts: u256
     dispute_reason: str
-    evidence_urls: DynArray[str]
-    
-    refund_tier: u256 # 0, 50, 100
+    evidence_url_1: str
+    evidence_url_2: str
+    refund_tier: u256
     buyer_payout: u256
     seller_payout: u256
-    outcome: str # "NONE", "MATCHES_DESCRIPTION", "PARTIAL_MISMATCH", "MATERIAL_MISMATCH", "UNDETERMINED"
+    outcome: str
     last_error: str
 
+class GenDispute(gl.Contract):
+    orders: DynArray[Order]
+
     def __init__(self):
-        self.seller = Address(b'\x00' * 20)
-        self.buyer = Address(b'\x00' * 20)
-        self.escrow_amount = u256(0)
-        self.listing_url = ""
-        self.listing_snapshot = ""
-        self.item_description = ""
-        
-        self.status = "NONE"
-        self.dispute_attempts = u256(0)
-        self.dispute_reason = ""
-        self.refund_tier = u256(0)
-        self.buyer_payout = u256(0)
-        self.seller_payout = u256(0)
-        self.outcome = "NONE"
-        self.last_error = ""
+        pass
+
+    def _get_order(self, order_id: u256) -> Order:
+        order_index = int(order_id)
+        if order_index < 0 or order_index >= len(self.orders):
+            raise ValueError("Order does not exist")
+        return self.orders[order_index]
 
     @gl.public.write.payable
-    def create_order(self, buyer: Address, listing_url: str, listing_snapshot: str, item_description: str) -> None:
+    def create_order(self, buyer: Address, listing_url: str, listing_snapshot: str, item_description: str) -> u256:
         buyer_addr = buyer if isinstance(buyer, Address) else Address(buyer)
         
         if gl.message.value <= 0:
             raise ValueError("Escrow amount must be positive")
-        if self.status != "NONE":
-            raise ValueError("Order already created")
         if buyer_addr == gl.message.sender_address:
             raise ValueError("Buyer cannot be seller")
         if not (listing_url.startswith("http://") or listing_url.startswith("https://")):
@@ -70,21 +66,39 @@ class GenDispute(gl.Contract):
         if listing_snapshot != FIXTURE_REGISTRY[listing_url]:
             raise ValueError("Listing snapshot does not match the registered content for this URL")
         
-        self.seller = gl.message.sender_address
-        self.buyer = buyer_addr
-        self.escrow_amount = gl.message.value
-        self.listing_url = listing_url
-        self.listing_snapshot = listing_snapshot
-        self.item_description = item_description
-        self.status = "OPEN"
+        order_id = u256(len(self.orders))
+        self.orders.append(
+            Order(
+                order_id,
+                gl.message.sender_address,
+                buyer_addr,
+                gl.message.value,
+                listing_url,
+                listing_snapshot,
+                item_description,
+                "OPEN",
+                u256(0),
+                "",
+                "",
+                "",
+                u256(0),
+                u256(0),
+                u256(0),
+                "NONE",
+                "",
+            )
+        )
+        return order_id
 
     @gl.public.write
-    def open_dispute(self, reason: str, evidence_url_1: str, evidence_url_2: str = "") -> None:
-        if gl.message.sender_address != self.buyer:
+    def open_dispute(self, order_id: u256, reason: str, evidence_url_1: str, evidence_url_2: str = "") -> None:
+        order = self._get_order(order_id)
+
+        if gl.message.sender_address != order.buyer:
             raise ValueError("Only buyer can open dispute")
-        if self.status not in ["OPEN", "UNDETERMINED"]:
+        if order.status not in ["OPEN", "UNDETERMINED"]:
             raise ValueError("Order cannot be disputed")
-        if self.dispute_attempts >= 2:
+        if order.dispute_attempts >= 2:
             raise ValueError("Max retry cap reached")
         if evidence_url_1 == "":
             raise ValueError("At least one evidence URL is required")
@@ -94,16 +108,14 @@ class GenDispute(gl.Contract):
             if not (evidence_url_2.startswith("http://") or evidence_url_2.startswith("https://")):
                 raise ValueError("Invalid URL scheme")
             
-        self.status = "DISPUTE_PENDING"
-        self.dispute_reason = reason
-        self.evidence_urls.clear()
-        self.evidence_urls.append(evidence_url_1)
-        if evidence_url_2 != "":
-            self.evidence_urls.append(evidence_url_2)
+        order.status = "DISPUTE_PENDING"
+        order.dispute_reason = reason
+        order.evidence_url_1 = evidence_url_1
+        order.evidence_url_2 = evidence_url_2
             
         # Capture variables for nondet closures
-        listing_snapshot = self.listing_snapshot
-        item_description = self.item_description
+        listing_snapshot = order.listing_snapshot
+        item_description = order.item_description
         evidence_urls_list = [evidence_url_1]
         if evidence_url_2 != "":
             evidence_urls_list.append(evidence_url_2)
@@ -255,64 +267,73 @@ class GenDispute(gl.Contract):
             
             # Explicitly validate consensus result
             if tier not in [0, 50, 100] or reason_code not in ["MATCHES_DESCRIPTION", "PARTIAL_MISMATCH", "MATERIAL_MISMATCH"]:
-                self.status = "UNDETERMINED"
-                self.dispute_attempts += u256(1)
-                self.last_error = "Consensus output validation failed"
-                self.outcome = "UNDETERMINED"
+                order.status = "UNDETERMINED"
+                order.dispute_attempts += u256(1)
+                order.last_error = "Consensus output validation failed"
+                order.outcome = "UNDETERMINED"
             elif reason_code == "UNDETERMINED" or tier == -1:
-                self.status = "UNDETERMINED"
-                self.dispute_attempts += u256(1)
-                self.last_error = consensus_result.get("summary", "Validation error or undetermined result")
-                self.outcome = "UNDETERMINED"
+                order.status = "UNDETERMINED"
+                order.dispute_attempts += u256(1)
+                order.last_error = consensus_result.get("summary", "Validation error or undetermined result")
+                order.outcome = "UNDETERMINED"
             else:
-                self.refund_tier = u256(tier)
-                self.status = "RESOLVED"
-                self.outcome = reason_code
-                self._execute_payout(tier)
+                order.refund_tier = u256(tier)
+                order.status = "RESOLVED"
+                order.outcome = reason_code
+                self._execute_payout(order_id, tier)
         except Exception as e:
-            self.status = "UNDETERMINED"
-            self.dispute_attempts += u256(1)
-            self.last_error = str(e)
-            self.outcome = "UNDETERMINED"
+            order.status = "UNDETERMINED"
+            order.dispute_attempts += u256(1)
+            order.last_error = str(e)
+            order.outcome = "UNDETERMINED"
 
-    def _execute_payout(self, tier: int) -> None:
-        escrow = int(self.escrow_amount)
+    def _execute_payout(self, order_id: u256, tier: int) -> None:
+        order = self._get_order(order_id)
+        escrow = int(order.escrow_amount)
         buyer_share = escrow * tier // 100
         seller_share = escrow - buyer_share
         
-        self.buyer_payout = u256(buyer_share)
-        self.seller_payout = u256(seller_share)
+        order.buyer_payout = u256(buyer_share)
+        order.seller_payout = u256(seller_share)
         
         # Payout to buyer
         if buyer_share > 0:
-            EVMRecipient(self.buyer).emit_transfer(value=u256(buyer_share))
+            EVMRecipient(order.buyer).emit_transfer(value=u256(buyer_share))
             
         # Payout to seller
         if seller_share > 0:
-            EVMRecipient(self.seller).emit_transfer(value=u256(seller_share))
+            EVMRecipient(order.seller).emit_transfer(value=u256(seller_share))
             
-        self.status = "PAID_OUT"
+        order.status = "PAID_OUT"
 
     @gl.public.view
-    def get_order(self) -> dict:
+    def get_order_count(self) -> int:
+        return len(self.orders)
+
+    @gl.public.view
+    def get_order(self, order_id: u256) -> dict:
+        order = self._get_order(order_id)
         evidence_list = []
-        for i in range(len(self.evidence_urls)):
-            evidence_list.append(self.evidence_urls[i])
+        if order.evidence_url_1 != "":
+            evidence_list.append(order.evidence_url_1)
+        if order.evidence_url_2 != "":
+            evidence_list.append(order.evidence_url_2)
             
         return {
-            "seller": self.seller.as_bytes,
-            "buyer": self.buyer.as_bytes,
-            "escrow_amount": int(self.escrow_amount),
-            "listing_url": self.listing_url,
-            "listing_snapshot": self.listing_snapshot,
-            "item_description": self.item_description,
-            "status": self.status,
-            "dispute_attempts": int(self.dispute_attempts),
-            "dispute_reason": self.dispute_reason,
+            "order_id": int(order.order_id),
+            "seller": order.seller.as_bytes,
+            "buyer": order.buyer.as_bytes,
+            "escrow_amount": int(order.escrow_amount),
+            "listing_url": order.listing_url,
+            "listing_snapshot": order.listing_snapshot,
+            "item_description": order.item_description,
+            "status": order.status,
+            "dispute_attempts": int(order.dispute_attempts),
+            "dispute_reason": order.dispute_reason,
             "evidence_urls": evidence_list,
-            "refund_tier": int(self.refund_tier),
-            "buyer_payout": int(self.buyer_payout),
-            "seller_payout": int(self.seller_payout),
-            "outcome": self.outcome,
-            "last_error": self.last_error
+            "refund_tier": int(order.refund_tier),
+            "buyer_payout": int(order.buyer_payout),
+            "seller_payout": int(order.seller_payout),
+            "outcome": order.outcome,
+            "last_error": order.last_error
         }

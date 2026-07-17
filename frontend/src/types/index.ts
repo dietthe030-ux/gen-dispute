@@ -11,6 +11,7 @@ export type UIState =
   | 'ERROR';
 
 export interface OrderState {
+  orderId: number;
   seller: string;
   buyer: string;
   escrowAmount: bigint;
