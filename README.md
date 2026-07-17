@@ -12,7 +12,7 @@ The repository contains a multi-order contract and frontend release candidate:
 - A user must enter an order ID to inspect an existing order, or create a new order.
 - `open_dispute` always targets an explicit order ID.
 
-The public Vercel app and Studionet address may still be running the earlier single-order release until the multi-order contract is deployed as a new instance and its real address is configured. Do not upgrade the legacy contract: it contains an open escrow and its storage layout is incompatible with this release.
+The multi-order contract is deployed on Studionet at [`0xef5663Ae20d8604bc57Bcf87c691ffc64c73CAA7`](https://explorer-studio.genlayer.com/address/0xef5663Ae20d8604bc57Bcf87c691ffc64c73CAA7). A direct `get_order_count()` read returned `0` during integration verification. The public Vercel app remains on the earlier release until its environment and production deployment are updated.
 
 ## Contract flow
 
@@ -86,14 +86,13 @@ Verified results for this release candidate:
 
 ## Deployment safety
 
-The legacy Studionet contract is `0xA10b4CCe4721ba86Ce902080a044BA5d465cEaB8`. It contains an open escrow and must remain untouched.
+The legacy Studionet contract is `0xA10b4CCe4721ba86Ce902080a044BA5d465cEaB8`. It contains an open escrow and remains untouched.
 
-To release the multi-order version:
+To complete the multi-order frontend release:
 
-1. Deploy `contracts/gen_dispute.py` as a new Studionet contract instance.
-2. Verify the new address and methods in GenLayer Studio or Explorer.
-3. Configure the exact new address in local and Vercel environment variables.
-4. Run a two-wallet smoke test for order creation, explicit ID lookup, observer access, and buyer-only dispute authorization.
-5. Only then merge and deploy the multi-order frontend.
+1. Configure the verified multi-order address in Vercel.
+2. Run the complete local verification suite.
+3. Merge and deploy the frontend through the verified `dietthe030-ux` GitHub and Vercel accounts.
+4. Run a two-wallet production smoke test for order creation, explicit ID lookup, observer access, and buyer-only dispute authorization.
 
 No guessed or placeholder address may be used.

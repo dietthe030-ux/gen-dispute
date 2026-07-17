@@ -1,6 +1,6 @@
 # Project Roadmap
 
-This roadmap reflects evidence reviewed on July 17, 2026. It distinguishes the currently deployed single-order prototype from the multi-order release candidate in this repository. It does not treat local code as deployed functionality and does not claim users, traction, partnerships, or live dispute settlement without evidence.
+This roadmap reflects evidence reviewed on July 17, 2026. It distinguishes the legacy single-order production release, the deployed multi-order Studionet contract, and the multi-order frontend that is awaiting production environment migration. It does not claim users, traction, partnerships, or live dispute settlement without evidence.
 
 ## V1 Delivered
 
@@ -25,6 +25,7 @@ The Intelligent Contract holds escrow, enforces participant access, preserves th
 | Public source | [dietthe030-ux/gen-dispute](https://github.com/dietthe030-ux/gen-dispute) contains the deployed V1 source history. |
 | Live web app | [gen-dispute.vercel.app](https://gen-dispute.vercel.app) is the public Vercel application connected to the GitHub repository. |
 | Legacy Studionet contract | [`0xA10b4CCe4721ba86Ce902080a044BA5d465cEaB8`](https://explorer-studio.genlayer.com/address/0xA10b4CCe4721ba86Ce902080a044BA5d465cEaB8) is the verified V1 instance. |
+| Multi-order Studionet contract | [`0xef5663Ae20d8604bc57Bcf87c691ffc64c73CAA7`](https://explorer-studio.genlayer.com/address/0xef5663Ae20d8604bc57Bcf87c691ffc64c73CAA7) accepted a direct `get_order_count()` read and returned `0` during integration verification. |
 | Verified Studionet write | The [`create_order` transaction](https://explorer-studio.genlayer.com/tx/0x6d2ddeeaefb0ac249a9471d1b2d03f2df7e53a4f1c833678fbc6d9c49fa2d2ab) finalized successfully with 1.50 GEN. |
 | Live state observed before this redesign | The V1 contract exposed one `OPEN` order with 1.5 GEN, seller `0x277bf20771129ae224042d23b0311c1ac5a9ac1b`, buyer `0x896ef52d620ea3ccda34b4e72a8e197974e4e39e`, and zero dispute attempts. |
 | Multi-order contract verification | The release-candidate contract passed 22 of 22 local GenVM tests, including creation isolation, settlement isolation, and unknown-ID rejection. |
@@ -32,9 +33,9 @@ The Intelligent Contract holds escrow, enforces participant access, preserves th
 
 ### Honest boundary between V1 and the release candidate
 
-The live contract and live frontend currently represent the earlier single-order architecture. The repository worktree now contains a multi-order design using `DynArray[Order]`, explicit `order_id` reads and writes, manual order lookup, and account-change selection clearing. That redesign is tested locally but is not yet claimed as deployed.
+The new Studionet contract implements the multi-order design using `DynArray[Order]` and explicit `order_id` reads and writes. The corresponding frontend implements manual order lookup and account-change selection clearing. The contract is deployed and readable, but the public Vercel frontend is not yet claimed as migrated to it.
 
-The legacy contract contains an open escrow. It must not be upgraded because the new storage layout is incompatible and an upgrade would create unnecessary fund and state risk. The multi-order release requires a new contract instance and a new verified address before the frontend can be merged to the production branch.
+The legacy contract contains an open escrow and was not upgraded. Its incompatible storage layout remains isolated from the new deployment.
 
 Other V1 limitations remain:
 
@@ -93,7 +94,7 @@ Current evidence is separated from future targets.
 | --- | --- | --- | --- |
 | Contract regression reliability | 22/22 multi-order contract tests passed locally. | 100% of required contract checks pass for every release candidate. | Pinned CI logs and reviewed GenVM test output. |
 | Frontend regression reliability | 27/27 tests passed; lint and build succeeded. | 100% of required frontend checks pass on every main-branch change. | CI results for tests, lint, typecheck, and build. |
-| Live multi-order deployment | No multi-order address has been provided or verified. | One new verified Studionet instance exposing `get_order_count`, `get_order(order_id)`, and `open_dispute(order_id, ...)`. | Studio and Explorer method inspection plus recorded smoke-test transactions. |
+| Live multi-order deployment | Contract `0xef5663Ae20d8604bc57Bcf87c691ffc64c73CAA7` is reachable and `get_order_count()` returned `0`; no live order write or dispute exists yet. | Complete supervised order creation, lookup, authorization, dispute, and payout smoke tests. | Studio and Explorer inspection plus recorded smoke-test transactions. |
 | Wallet-to-order correctness | Local UI tests confirm no default selection for a newly connected wallet. | Zero cases in pilot testing where an account switch retains an unintended selected order. | Automated account-change tests and consent-based session logs. |
 | Transaction finalization | One V1 order creation is verified; no meaningful denominator exists. | At least 95% of wallet-approved pilot writes finalize successfully, excluding user-rejected prompts. | Reconcile frontend submissions with Explorer receipts. |
 | End-to-end dispute completion | No live V1 dispute or payout has been verified. | At least 10 supervised finalized disputes, with at least two examples of each payout tier after safety hardening. | Explorer transactions and contract-state reconciliation. |
@@ -104,13 +105,13 @@ Current evidence is separated from future targets.
 
 ## Future Updates
 
-### Phase 1: Deploy and validate the multi-order release
+### Phase 1: Complete and validate the multi-order release
 
-- **Problem:** The live deployment is single-order and causes every wallet to see the same global state.
+- **Problem:** The multi-order contract is deployed, but the production frontend environment and live transaction flow are not yet migrated and verified.
 - **User value:** Users can create multiple isolated escrows and intentionally open a known order by ID.
-- **Changes:** Deploy the tested `DynArray[Order]` contract as a new instance; verify count/read/dispute methods; configure the new address; run two-wallet and observer smoke tests; merge the frontend only after compatibility is proven.
+- **Changes:** Configure the verified address in Vercel; deploy the tested frontend; run two-wallet and observer smoke tests; verify order creation, lookup, authorization, dispute, and settlement evidence.
 - **Integrations:** GenLayer Studio, Explorer, GitHub, and Vercel.
-- **Conditions:** A real new address, verified method behavior, protected legacy escrow, passing checks, and correct GitHub/Vercel account verification.
+- **Conditions:** Correct GitHub/Vercel account verification, production environment migration, passing checks, and continued protection of the legacy escrow.
 - **Success:** Multiple live orders retain isolated state; wallet switching clears selection; unauthorized disputes fail; all production routes and checks pass.
 
 ### Phase 2: Complete escrow lifecycle and recovery

@@ -22,13 +22,13 @@ Changing accounts clears the selected order. The interface never assumes that a 
 
 ## Configuration
 
-Create a local `.env` only after a real multi-order contract has been deployed and verified:
+The verified multi-order Studionet deployment is:
 
 ```text
-VITE_CONTRACT_ADDRESS=<verified new Studionet contract address>
+0xef5663Ae20d8604bc57Bcf87c691ffc64c73CAA7
 ```
 
-Do not configure the legacy single-order address for this frontend release. Do not commit `.env`; `.env.example` intentionally contains no address.
+Configure that exact address in the gitignored local `.env` and the matching Vercel environment. Do not configure the legacy single-order address for this frontend release. Do not commit `.env`; `.env.example` intentionally contains no address.
 
 ## Commands
 
