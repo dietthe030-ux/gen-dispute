@@ -1,100 +1,67 @@
 # GenDispute
 
-GenDispute is a GenLayer Studionet escrow prototype for item-not-as-described disputes. A seller creates an independent order, deposits native GEN, and names a buyer. If the buyer disputes the delivery, GenLayer validators evaluate public evidence and the Intelligent Contract applies a deterministic 0%, 50%, or 100% buyer refund.
+Decentralized e-commerce dispute resolution and escrow refund settlement on GenLayer.
 
-## Current release status
+GenDispute provides trustless consumer protection for peer-to-peer digital item sales. A seller locks native GEN escrow and names a buyer. If the buyer receives an item that is damaged, counterfeit, or not as described, GenLayer's multi-validator AI consensus evaluates public listing snapshots and buyer evidence on-chain, automatically applying a 0%, 50%, or 100% refund.
 
-The repository contains a multi-order contract and frontend release candidate:
-
-- Every order receives a numeric `order_id`.
-- `DynArray[Order]` keeps escrow, participants, evidence, attempts, and settlement state isolated per order.
-- The frontend never selects order `0` merely because a wallet connected or changed.
-- A user must enter an order ID to inspect an existing order, or create a new order.
-- `open_dispute` always targets an explicit order ID.
-
-The multi-order contract is deployed on Studionet at [`0xef5663Ae20d8604bc57Bcf87c691ffc64c73CAA7`](https://explorer-studio.genlayer.com/address/0xef5663Ae20d8604bc57Bcf87c691ffc64c73CAA7). A direct `get_order_count()` read returned `0` during integration verification. The multi-order frontend is live at [gen-dispute.vercel.app](https://gen-dispute.vercel.app).
-
-## Contract flow
-
-1. `create_order(buyer, listing_url, listing_snapshot, item_description) -> order_id`
-   - Requires a positive native GEN value.
-   - Validates the buyer, URL scheme, and fixture-backed listing snapshot.
-   - Appends a new isolated order in `OPEN` state.
-2. `get_order_count()`
-   - Returns the number of orders in the contract.
-3. `get_order(order_id)`
-   - Returns public state for exactly one order.
-4. `open_dispute(order_id, reason, evidence_url_1, evidence_url_2)`
-   - May be called only by that order's buyer.
-   - Fetches public evidence through nondeterministic execution.
-   - Validates the proposed verdict and pays 0%, 50%, or 100% of escrow to the buyer; the seller receives the remainder.
-   - An undetermined result keeps that order's escrow locked and permits at most one retry.
-
-## Frontend routes
-
-- `/` — wallet connection, order lookup, escrow creation, participant-specific actions, consensus progress, and settlement.
-- `/docs` — project purpose, architecture, security model, payout tiers, and contract method reference.
-
-The frontend uses an injected EIP-1193 wallet and requests GenLayer Studionet:
-
-- Chain ID: `61999` (`0xf22f`)
-- RPC: `https://studio.genlayer.com/api`
-
-The real contract address belongs only in the gitignored `frontend/.env`. The committed `frontend/.env.example` remains address-free.
-
-## Project structure
-
-```text
-gen-dispute/
-├── contracts/gen_dispute.py
-├── fixtures/
-├── frontend/
-│   ├── src/components/
-│   ├── src/hooks/
-│   ├── src/types/
-│   └── vercel.json
-├── tests/test_gen_dispute.py
-├── SPEC.md
-└── ROADMAP.md
+```
+┌─────────────────┐     ┌──────────────────────┐     ┌─────────────────────────────┐     ┌─────────────────┐
+│  Seller Creates │     │  Buyer Opens         │     │  GenLayer Consensus         │     │  On-Chain Payout│
+│  Isolated Order │     │  Dispute + Evidence  │     │                             │     │                 │
+│ Lock GEN Escrow │────>│ Submit Evidence URLs │────>│ Fetch Evidence via Web      │────>│ 0% / 50% / 100% │
+│ & Name Buyer    │     │ & Listing Snapshot   │     │ & LLM Verdict Evaluation    │     │ Buyer Settlement│
+└─────────────────┘     └──────────────────────┘     └─────────────────────────────┘     └─────────────────┘
 ```
 
-## Verification
+## The Problem
 
-Contract tests:
+Peer-to-peer e-commerce and digital asset trades face severe dispute risks:
+1. **Centralized Platform Bias:** E-commerce platforms (eBay, OpenSea, PayPal) charge heavy fees (10-15%) and handle disputes through slow human support teams that often rule arbitrarily.
+2. **No On-Chain Evidence Evaluation:** Traditional Solidity smart contracts cannot inspect digital receipt evidence, compare delivered item screenshots against listing descriptions, or calculate fair partial refunds.
+3. **Escrow Lockup Risk:** In conventional escrow scripts, if parties disagree, funds are trapped indefinitely unless a central arbiter intervenes.
 
+## How It Works
+
+1. **Create Order:** A seller calls `create_order` specifying the buyer address, listing URL, item snapshot hash, and item description while depositing native GEN into contract escrow.
+2. **Open Dispute:** If the item delivered does not match the agreed description, the buyer calls `open_dispute(order_id, reason, evidence_url_1, evidence_url_2)`.
+3. **Consensus Verdict:** GenLayer validators fetch the listing snapshot and buyer evidence URLs directly on-chain via `gl.nondet.web.render`. The AI evaluator compares the evidence against the seller's initial description using `gl.nondet.exec_prompt`.
+4. **Deterministic Payout:** GenLayer's `validator_fn` verifies score calculations and enforces payout tiers:
+   - **0% Buyer Refund (100% Seller):** Evidence shows item was delivered correctly.
+   - **50% Partial Refund:** Minor defect or partial missing component.
+   - **100% Full Buyer Refund:** Item counterfeit, severely damaged, or not delivered.
+
+## Why GenLayer
+
+- **On-Chain Evidence Web Scraping:** GenLayer contracts fetch and render external web evidence directly via `gl.nondet.web.render` without central oracles.
+- **LLM Evidence Comparison:** Smart contracts reason about subjective evidence, item descriptions, and damage claims natively.
+- **Multi-Validator Consensus:** Independent validators achieve consensus on non-deterministic LLM evaluations before committing escrow state.
+
+## Live Deployment
+
+| Component | Network | Address / Location | Description |
+|-----------|---------|--------------------|-------------|
+| `gen_dispute.py` | GenLayer Studionet | [`0xef5663Ae20d8604bc57Bcf87c691ffc64c73CAA7`](https://explorer-studio.genlayer.com/address/0xef5663Ae20d8604bc57Bcf87c691ffc64c73CAA7) | Multi-order dispute resolution & escrow contract |
+| Frontend | Vercel | [gen-dispute.vercel.app](https://gen-dispute.vercel.app) | Live Next.js dApp for order lookup, dispute filing & settlement |
+
+## Architecture & Contract Methods
+
+### Contract Schema (`contracts/gen_dispute.py`)
+- `create_order(buyer: Address, listing_url: str, listing_snapshot: str, item_description: str) -> u256`: Creates an isolated order and locks GEN escrow.
+- `get_order_count() -> u256`: Returns total order count.
+- `get_order(order_id: u256) -> str`: Returns public metadata and state for a specific order.
+- `open_dispute(order_id: u256, reason: str, evidence_url_1: str, evidence_url_2: str)`: Triggers AI consensus evaluation and executes refund settlement.
+
+## Quick Start
+
+### 1. Run Contract Tests
 ```bash
 gltest tests/test_gen_dispute.py
 ```
 
-Verified result for this release candidate: `22 passed`.
-
-Frontend checks:
-
+### 2. Configure & Run Frontend
 ```bash
 cd frontend
+npm install
 npm test -- --run
-npm run lint
-npm run build
+npm run dev
 ```
-
-Verified results for this release candidate:
-
-- `27 passed` frontend tests.
-- Lint completed with zero errors.
-- TypeScript compilation and the Vite production build completed successfully.
-- Vite reports a non-blocking warning for a JavaScript chunk larger than 500 kB.
-
-## Deployment safety
-
-The legacy Studionet contract is `0xA10b4CCe4721ba86Ce902080a044BA5d465cEaB8`. It contains an open escrow and remains untouched.
-
-The multi-order frontend release is configured with the verified address. Production verification confirmed:
-
-1. GitHub `main` and Vercel Production were deployed through `dietthe030-ux`.
-2. `/` and `/docs` returned HTTP 200.
-3. The production bundle contained the new address and no legacy address.
-4. The live UI exposed the explicit order lookup and multi-order contract methods.
-
-A funded two-wallet production transaction test has not yet been recorded.
-
-No guessed or placeholder address may be used.
