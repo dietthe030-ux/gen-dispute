@@ -4,7 +4,7 @@ This directory contains the React 19, TypeScript, and Vite interface for the Gen
 
 ## Routes
 
-- `/` - connect a wallet, create an escrow, load an explicit order ID, open an eligible dispute, and inspect settlement state.
+- `/` - connect a wallet, create an escrow, load an explicit order ID, select evidence presets matched to that order's listing, open an eligible dispute, and inspect settlement state.
 - `/docs` - project, trust model, consensus, payout tiers, and contract reference.
 
 `vercel.json` rewrites direct route requests to the Vite entry point.
@@ -29,7 +29,7 @@ The production frontend is configured for:
 0xD37A4f08C46397da6Efa87a0009F4516B925A5f5
 ```
 
-Explorer verifies that the deployed source contains the independent validator reevaluation used by this repository. The deployment transaction is finalized and successful, and a direct `get_order_count()` read returned `0`.
+Explorer verifies that the deployed source contains the independent validator reevaluation used by this repository. It currently shows two funded orders. The first live dispute attempt finalized with successful GenVM execution but undetermined consensus, so the contract kept both order states unchanged and emitted no payout.
 
 Copy `.env.example` to the gitignored `.env`, then set `VITE_CONTRACT_ADDRESS` to the exact verified address above. Use the same value in the linked Vercel project. Never commit `.env` or use a placeholder address.
 
@@ -45,7 +45,7 @@ npm run build
 
 Current local verification:
 
-- 27 frontend tests passed.
+- 31 frontend tests passed.
 - Oxlint completed with zero errors.
 - TypeScript compilation and the Vite production build succeeded.
 - The production build reports a non-blocking large-chunk warning.

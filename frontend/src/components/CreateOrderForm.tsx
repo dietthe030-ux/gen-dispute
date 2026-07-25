@@ -29,7 +29,7 @@ export const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSubmit, isLo
       if (url.includes('rolex_v1')) {
         setDescription('Vintage Rolex watch including original box and papers')
       } else if (url.includes('rolex_v2')) {
-        setDescription('Cheap Casio watch instead of Rolex')
+        setDescription('Black Casio digital wristwatch')
       } else {
         setDescription('Vintage Rolex Submariner watch in excellent condition')
       }
@@ -106,7 +106,7 @@ export const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSubmit, isLo
             className={`btn btn-sm btn-outline-warning${selectedPreset === 'v2' || listingUrl.includes('rolex_v2') ? ' is-selected' : ''}`}
             disabled={isLoading}
           >
-            Rolex B (Casio swap)
+            Casio listing (Version B)
           </button>
           <button
             type="button"

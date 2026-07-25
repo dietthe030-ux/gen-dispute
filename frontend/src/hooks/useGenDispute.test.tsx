@@ -318,6 +318,44 @@ describe('useGenDispute Hook', () => {
       expect(result.current.errorMessage).toContain('Transaction consensus failed: MAJORITY_DISAGREE')
     })
 
+    it('explains an undetermined consensus without implying escrow loss', async () => {
+      const mockWriteContract = vi.mocked(client.writeContract)
+      mockWriteContract.mockResolvedValue('0xundetermined')
+
+      const mockWaitForReceipt = vi.mocked(client.waitForTransactionReceipt)
+      mockWaitForReceipt.mockResolvedValue({
+        status: 6,
+        status_name: 'UNDETERMINED',
+      } as any)
+
+      const mockRequest = (window as any).ethereum.request
+      mockRequest.mockImplementation(async ({ method }: any) => {
+        if (method === 'eth_chainId') return '0xf22f'
+        if (method === 'eth_requestAccounts') return ['0x1122334455667788990011223344556677889900']
+        return null
+      })
+
+      const { result } = renderHook(() => useGenDispute())
+
+      await act(async () => {
+        await result.current.connectWallet()
+      })
+
+      await act(async () => {
+        await result.current.createOrder(
+          '0xbuyer',
+          'https://listing.url/rolex_v1',
+          'Version A: Rolex watch including original box and papers',
+          'description',
+          '1.5'
+        )
+      })
+
+      expect(result.current.uiState).toBe('ERROR')
+      expect(result.current.errorMessage).toContain('Validators did not reach consensus')
+      expect(result.current.errorMessage).toContain('escrow remains locked')
+    })
+
     it('treats a receipt with no execution signal as a failure', async () => {
       const mockWriteContract = vi.mocked(client.writeContract)
       mockWriteContract.mockResolvedValue('0xtxhash')

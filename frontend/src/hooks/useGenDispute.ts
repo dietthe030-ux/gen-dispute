@@ -38,6 +38,11 @@ const assertSuccessfulReceipt = (receipt: any) => {
     statusName !== TransactionStatus.ACCEPTED &&
     statusName !== TransactionStatus.FINALIZED
   ) {
+    if (statusName === TransactionStatus.UNDETERMINED) {
+      throw new Error(
+        'Validators did not reach consensus. Contract state was not changed and escrow remains locked. Review the evidence for contradictions before retrying.'
+      )
+    }
     throw new Error(`Transaction ended with status: ${statusName}`)
   }
 

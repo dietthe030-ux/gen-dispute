@@ -32,10 +32,10 @@ GenLayer lets the decision execute within an Intelligent Contract and be checked
 | Component | Current public endpoint | Verified status on July 26, 2026 |
 | --- | --- | --- |
 | Web application | [gen-dispute.vercel.app](https://gen-dispute.vercel.app) | React + Vite application with `/` and `/docs` routes |
-| Production contract | [`0xD37A4f08C46397da6Efa87a0009F4516B925A5f5`](https://explorer-studio.genlayer.com/address/0xD37A4f08C46397da6Efa87a0009F4516B925A5f5) | Current source verified in Explorer; [deployment transaction](https://explorer-studio.genlayer.com/tx/0xb6ac673c903453abb5a522063ac9cf7b139d5c8568bb40c30c8478806671bcb5) is `FINALIZED`, `SUCCESS`, and accepted |
+| Production contract | [`0xD37A4f08C46397da6Efa87a0009F4516B925A5f5`](https://explorer-studio.genlayer.com/address/0xD37A4f08C46397da6Efa87a0009F4516B925A5f5) | Current source verified in Explorer; deployment and two `create_order` writes are finalized and accepted |
 | Network | GenLayer Studionet, chain ID `61999` | RPC: `https://studio.genlayer.com/api` |
 
-An independent `get_order_count()` read returned `0` after deployment. No legacy contract is used by the submitted frontend or listed as the implementation target.
+Explorer currently shows two funded orders and 0.20 GEN held by the contract. The first live [`open_dispute` transaction](https://explorer-studio.genlayer.com/tx/0x640a84828b3baea2444cc4b2849787b8ed426e2ad5d1441ca263c02488035109) finalized with successful GenVM execution but an `Undetermined` consensus result, so its state transition was rolled back and no payout occurred. No legacy contract is used by the submitted frontend or listed as the implementation target.
 
 ## Intelligent Contract API
 
@@ -67,7 +67,7 @@ For each write, the application:
 
 Routes:
 
-- `/` - wallet connection, explicit order lookup, order creation, dispute, and result UI.
+- `/` - wallet connection, explicit order lookup, order creation, listing-aware evidence presets, dispute, and result UI.
 - `/docs` - reviewer-facing product, architecture, and contract reference.
 
 ## Repository layout
@@ -104,10 +104,10 @@ npm run build
 Current local results:
 
 - 24 contract tests passed.
-- 27 frontend tests passed.
+- 31 frontend tests passed.
 - GenVM lint, frontend lint, TypeScript compilation, and the Vite production build passed.
 
-Local tests mock web, model, wallet, and SDK behavior; they are regression evidence, not proof of a live dispute settlement.
+Local tests mock web, model, wallet, and SDK behavior; they are regression evidence, not proof of a successful live dispute settlement.
 
 ## Configuration and deployment
 
@@ -119,7 +119,7 @@ Local tests mock web, model, wallet, and SDK behavior; they are regression evide
 - Evidence URLs are buyer-supplied public pages, not guaranteed authoritative sources. They can change or disappear and are not content-addressed.
 - No buyer-confirmation, cancellation, deadline, timeout settlement, or emergency recovery flow exists.
 - Two undetermined attempts can leave escrow locked.
-- The current production contract has a verified deployment and read, but no order, dispute, verdict, or payout transaction.
+- The current production contract has two funded orders and one finalized but undetermined dispute attempt; no accepted live verdict or payout has been verified.
 - The production bundle currently emits a non-blocking large-chunk warning.
 - Studionet is a test environment and the contract has not received a production security audit.
 

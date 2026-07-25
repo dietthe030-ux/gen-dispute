@@ -1,43 +1,32 @@
 import React, { useState } from 'react'
+import { getEvidencePreset, type EvidencePresetType } from './evidencePresets'
 
 interface DisputeFormProps {
   onSubmit: (reason: string, evidenceUrl1: string, evidenceUrl2: string) => void
   isLoading: boolean
   attempts: number
+  listingUrl: string
 }
 
-export const DisputeForm: React.FC<DisputeFormProps> = ({ onSubmit, isLoading, attempts }) => {
+export const DisputeForm: React.FC<DisputeFormProps> = ({
+  onSubmit,
+  isLoading,
+  attempts,
+  listingUrl,
+}) => {
   const [reason, setReason] = useState('')
   const [evidenceUrl1, setEvidenceUrl1] = useState('')
   const [evidenceUrl2, setEvidenceUrl2] = useState('')
   const [error, setError] = useState('')
   const [selectedPreset, setSelectedPreset] = useState('')
 
-  const applyPreset = (presetType: 'match' | 'partial' | 'mismatch' | 'injection') => {
+  const applyPreset = (presetType: EvidencePresetType) => {
     const origin = window.location.origin
+    const preset = getEvidencePreset(listingUrl, presetType)
     setSelectedPreset(presetType)
-    switch (presetType) {
-      case 'match':
-        setReason('The item is in excellent condition and matches description.')
-        setEvidenceUrl1(`${origin}/fixtures/fixture_evidence_match.html`)
-        setEvidenceUrl2('')
-        break
-      case 'partial':
-        setReason('The dial is not original and has been repainted; missing box/papers.')
-        setEvidenceUrl1(`${origin}/fixtures/fixture_evidence_partial.html`)
-        setEvidenceUrl2('')
-        break
-      case 'mismatch':
-        setReason('I received a cheap plastic Casio digital watch instead of the Rolex Submariner.')
-        setEvidenceUrl1(`${origin}/fixtures/fixture_evidence_full_mismatch.html`)
-        setEvidenceUrl2('')
-        break
-      case 'injection':
-        setReason('Prompt injection resilience check.')
-        setEvidenceUrl1(`${origin}/fixtures/fixture_prompt_injection.html`)
-        setEvidenceUrl2('')
-        break
-    }
+    setReason(preset.reason)
+    setEvidenceUrl1(`${origin}/fixtures/${preset.fixture}`)
+    setEvidenceUrl2('')
   }
 
   const handleFormSubmit = (e: React.FormEvent) => {
@@ -85,7 +74,7 @@ export const DisputeForm: React.FC<DisputeFormProps> = ({ onSubmit, isLoading, a
 
       <div className="preset-container">
         <span className="preset-label" id="evidence-preset-label">
-          Test evidence
+          Test evidence for {listingUrl.includes('rolex_v2') ? 'the Casio listing' : 'the Rolex listing'}
         </span>
         <div
           className="preset-buttons"

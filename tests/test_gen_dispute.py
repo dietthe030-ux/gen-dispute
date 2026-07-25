@@ -776,6 +776,10 @@ def test_public_evidence_fixtures_match_contract_listing():
         "fixture_evidence_partial.html",
         "fixture_evidence_full_mismatch.html",
         "fixture_prompt_injection.html",
+        "fixture_evidence_casio_match.html",
+        "fixture_evidence_casio_partial.html",
+        "fixture_evidence_rolex_instead_of_casio.html",
+        "fixture_prompt_injection_casio.html",
     ]
 
     root_fixtures = project_root / "fixtures"
@@ -803,3 +807,19 @@ def test_public_evidence_fixtures_match_contract_listing():
     assert "Rolex Submariner" in partial_evidence
     assert "Rolex Submariner" in mismatch_evidence
     assert "Casio digital watch" in mismatch_evidence
+
+    casio_match = (root_fixtures / "fixture_evidence_casio_match.html").read_text(
+        encoding="utf-8"
+    )
+    casio_partial = (
+        root_fixtures / "fixture_evidence_casio_partial.html"
+    ).read_text(encoding="utf-8")
+    rolex_for_casio = (
+        root_fixtures / "fixture_evidence_rolex_instead_of_casio.html"
+    ).read_text(encoding="utf-8")
+
+    assert "Casio digital wristwatch" in casio_match
+    assert "minor cosmetic strap scratches" in casio_partial
+    assert "No Casio digital watch was delivered" in rolex_for_casio
+    assert "matching the listing" not in casio_match.lower()
+    assert "matching the listing" not in rolex_for_casio.lower()

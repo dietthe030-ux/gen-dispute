@@ -167,7 +167,10 @@ export const DocsPage = () => {
             </article>
             <article>
               <h3>Submit public evidence</h3>
-              <p>The buyer provides a reason and public URLs when the delivered item differs.</p>
+              <p>
+                The buyer provides a reason and public URLs. Demo presets are matched to the
+                selected order so the reported delivery facts do not contradict its listing.
+              </p>
             </article>
             <article>
               <h3>Settle the escrow</h3>
@@ -251,6 +254,13 @@ export const DocsPage = () => {
               <p>
                 Schema checks reject malformed output; validators also repeat the evidence task
                 before a verdict can trigger payout.
+              </p>
+            </article>
+            <article>
+              <h3>Safe undetermined outcome</h3>
+              <p>
+                If validators do not agree, the write does not settle the order and escrow remains
+                locked instead of applying an unsupported verdict.
               </p>
             </article>
           </div>

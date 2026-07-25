@@ -166,6 +166,7 @@ const App: React.FC = () => {
                         }}
                         isLoading={isSubmitting}
                         attempts={orderState.disputeAttempts}
+                        listingUrl={orderState.listingUrl}
                       />
                     )}
 

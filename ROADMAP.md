@@ -1,6 +1,6 @@
 # Project Roadmap
 
-This roadmap reflects source, test, live application, and Studionet Explorer evidence reviewed on July 26, 2026. It does not claim users, traction, partnerships, or a live dispute settlement.
+This roadmap reflects source, test, live application, and Studionet Explorer evidence reviewed on July 26, 2026. It does not claim users, traction, partnerships, or a successful live dispute settlement.
 
 ## V1 Delivered
 
@@ -15,6 +15,7 @@ The current source candidate includes:
 - independent validator retrieval and reevaluation of the same evidence;
 - consensus comparison over `reason_code`, `refund_tier`, and `evidence_sufficient`, with schema and internal-consistency checks as supplemental guards;
 - React 19, TypeScript, Vite, `genlayer-js`, and injected EIP-1193 wallet integration;
+- listing-aware demo evidence presets that keep Rolex and Casio delivery facts aligned with the selected order;
 - explicit order lookup, buyer/seller/observer roles, account-change selection clearing, transaction progress, receipt execution checks, and error states; and
 - `/docs`, root and frontend setup documentation, contract tests, and frontend tests.
 
@@ -24,9 +25,9 @@ The current source candidate includes:
 | --- | --- |
 | Public source | [dietthe030-ux/gen-dispute](https://github.com/dietthe030-ux/gen-dispute) contains the reviewed contract, frontend, tests, and documentation. |
 | Local contract verification | 24/24 tests pass, including rejection of a schema-valid leader verdict that disagrees with an independent validator evaluation. |
-| Local frontend verification | 27/27 tests pass; Oxlint, TypeScript compilation, and the Vite production build pass. |
+| Local frontend verification | 31/31 tests pass; Oxlint, TypeScript compilation, and the Vite production build pass. |
 | Live web | [gen-dispute.vercel.app](https://gen-dispute.vercel.app) and `/docs` load and use the production Studionet contract. |
-| Studionet deployment | Explorer shows that [`0xD37A4f08C46397da6Efa87a0009F4516B925A5f5`](https://explorer-studio.genlayer.com/address/0xD37A4f08C46397da6Efa87a0009F4516B925A5f5) contains the reviewed source. Its [deployment transaction](https://explorer-studio.genlayer.com/tx/0xb6ac673c903453abb5a522063ac9cf7b139d5c8568bb40c30c8478806671bcb5) is finalized and successful; a direct `get_order_count()` read returned `0`. |
+| Studionet deployment | Explorer shows that [`0xD37A4f08C46397da6Efa87a0009F4516B925A5f5`](https://explorer-studio.genlayer.com/address/0xD37A4f08C46397da6Efa87a0009F4516B925A5f5) contains the reviewed source, two accepted `create_order` writes, and 0.20 GEN. The first [`open_dispute` attempt](https://explorer-studio.genlayer.com/tx/0x640a84828b3baea2444cc4b2849787b8ed426e2ad5d1441ca263c02488035109) finalized with successful GenVM execution but undetermined consensus; its state transition was rolled back. |
 
 ### Current limitations
 
@@ -34,7 +35,7 @@ Other current limitations are:
 
 - Listing creation is limited to a small hardcoded fixture registry; the listing URL itself is not fetched.
 - Buyer-supplied evidence URLs are public web inputs, not guaranteed authoritative or immutable sources.
-- No live order, dispute, verdict, or payout transaction is currently visible on the frontend-configured contract.
+- Two funded live orders and one undetermined dispute attempt are visible; no accepted live verdict or payout is verified.
 - No buyer-confirmation, cancellation, deadline, timeout settlement, or emergency recovery path exists.
 - Two undetermined attempts can leave escrow locked.
 - Local contract tests mock web and model results; frontend tests mock the wallet and SDK.
@@ -79,12 +80,12 @@ Current evidence is separated from future targets.
 | Metric | Current evidence | Future target | Measurement |
 | --- | --- | --- | --- |
 | Contract regression reliability | 24/24 local tests pass. | All required checks pass for every release candidate. | Pinned CI logs and reviewed GenVM test output. |
-| Frontend regression reliability | 27/27 tests, lint, and build pass. | All required checks pass on every main-branch change. | CI test, lint, typecheck, and build results. |
+| Frontend regression reliability | 31/31 tests, lint, and build pass. | All required checks pass on every main-branch change. | CI test, lint, typecheck, and build results. |
 | Source-to-deployment integrity | Explorer source and the reviewed contract match; production uses the verified address. | Preserve this alignment for every release. | Commit hash, deployment transaction, Explorer source, and production environment review. |
-| Transaction success | Existing address has only one successful deployment transaction; there is no order-write denominator. | At least 95% of wallet-approved supervised writes finalize successfully, excluding user rejection. | Reconcile frontend submissions with Explorer receipts and execution results. |
-| End-to-end dispute completion | No live dispute or payout is verified. | At least 10 supervised finalized disputes after lifecycle hardening, including evidence for every supported tier. | Explorer transactions and post-transaction contract-state reconciliation. |
+| Transaction success | Two `create_order` writes finalized successfully; one `open_dispute` write finalized with undetermined consensus. | At least 95% of wallet-approved supervised writes finalize with accepted consensus, excluding user rejection. | Reconcile frontend submissions with Explorer receipts and execution results. |
+| End-to-end dispute completion | One live dispute attempt is verified as undetermined; no live payout is verified. | At least 10 supervised finalized disputes after lifecycle hardening, including evidence for every supported tier. | Explorer transactions and post-transaction contract-state reconciliation. |
 | Order selection correctness | Automated tests cover explicit lookup and wallet-change clearing. | Zero unintended retained selections during the pilot. | Account-change tests and consent-based pilot issue logs. |
-| Fund safety | No current live order balance exists on the frontend-configured address. | Zero unreconciled balances and a documented result for every terminal and recovery state. | Contract balance reconciliation, state monitoring, and incident records. |
+| Fund safety | Explorer shows 0.20 GEN held across two open orders after the undetermined dispute was rolled back; no payout has occurred. | Zero unreconciled balances and a documented result for every terminal and recovery state. | Contract balance reconciliation, state monitoring, and incident records. |
 | Initial reach | No verified users or community count. | 25 qualified pilot wallets and 10 participants completing a second supported flow within 30 days. | Deduplicated opt-in pilot cohorts excluding team and automated wallets. |
 | Frontend performance | Build passes with a large-chunk warning; no field baseline exists. | Remove the warning and meet p75 LCP below 2.5 seconds on an agreed mobile profile. | Bundle analysis, Lighthouse CI, and consent-based web vitals. |
 
@@ -92,9 +93,9 @@ Current evidence is separated from future targets.
 
 ### Phase 1: Verify funded end-to-end transactions
 
-- **Problem:** Source and deployment now align, but no funded order, dispute, or payout has been recorded on the new instance.
+- **Problem:** Funded orders and an undetermined dispute are recorded, but no accepted verdict or payout has completed on the new instance.
 - **User value:** Reviewers and users can verify the complete workflow rather than deployment alone.
-- **Changes:** Run low-value create/read/dispute/payout smoke tests with two wallets and preserve Explorer evidence.
+- **Changes:** Use listing-aware, fact-only evidence fixtures for low-value dispute/payout smoke tests and preserve Explorer evidence.
 - **Integrations:** GenLayer Studio, Studionet Explorer, GitHub, and Vercel.
 - **Conditions:** Passing checks, funded Studionet test wallets, and agreed evidence fixtures.
 - **Success:** Source, live address, Explorer transactions, and resulting order state all match.
