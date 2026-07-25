@@ -32,10 +32,10 @@ GenLayer lets the decision execute within an Intelligent Contract and be checked
 | Component | Current public endpoint | Verified status on July 26, 2026 |
 | --- | --- | --- |
 | Web application | [gen-dispute.vercel.app](https://gen-dispute.vercel.app) | React + Vite application with `/` and `/docs` routes |
-| Production contract | [`0x1E877E7B333D5371a75d2EF995763bcdabaeB9cE`](https://explorer-studio.genlayer.com/address/0x1E877E7B333D5371a75d2EF995763bcdabaeB9cE) | Current source verified in Explorer; [deployment transaction](https://explorer-studio.genlayer.com/tx/0x7ebe17a1815e77ffcd2e6f3587693dfd3a44e7ff475f9a05ebb90fe5e19ceab8) is `FINALIZED`, `SUCCESS`, and accepted |
+| Production contract | [`0x1E877E7B333D5371a75d2EF995763bcdabaeB9cE`](https://explorer-studio.genlayer.com/address/0x1E877E7B333D5371a75d2EF995763bcdabaeB9cE) | Current source verified in Explorer; deployment, order creation, dispute, and payout are verified below |
 | Network | GenLayer Studionet, chain ID `61999` | RPC: `https://studio.genlayer.com/api` |
 
-The production instance was deployed from the reviewed source after fixing the identity-mismatch validation rule. Explorer shows a zero balance, one deployment transaction, and `get_order_count() == 0`. The previous test instance remains separate and is not used by the submitted frontend.
+The production instance was deployed from the reviewed source after fixing the identity-mismatch validation rule. The [deployment](https://explorer-studio.genlayer.com/tx/0x7ebe17a1815e77ffcd2e6f3587693dfd3a44e7ff475f9a05ebb90fe5e19ceab8), [0.1 GEN order creation](https://explorer-studio.genlayer.com/tx/0x6e066962310c5736670c6a20170cc61b8b81b3065e859ef78356114c33056e7f), and [100% material-mismatch dispute](https://explorer-studio.genlayer.com/tx/0x43f8916eace1c93da67ac8fe4173e85ab55e945feafd0bde094a73fcb8695e9d) are each `FINALIZED`, `SUCCESS`, and accepted. The resulting [0.1 GEN transfer to the buyer](https://explorer-studio.genlayer.com/tx/0x312f9bba5a7a0663a75da2fc46a1f41924b9416fc855c164b939d6c4e200d69a) is finalized. A direct state read returns one order, status `PAID_OUT`, refund tier `100`, buyer payout `0.1 GEN`, seller payout `0`, and a zero contract balance. The previous test instance remains separate and is not used by the submitted frontend.
 
 ## Intelligent Contract API
 
@@ -59,7 +59,7 @@ For each write, the application:
 1. requests or switches the wallet to Studionet;
 2. asks the wallet to sign and submits `client.writeContract`;
 3. displays submission and consensus-pending states;
-4. waits for an `ACCEPTED` receipt and checks consensus plus GenVM execution results;
+4. waits for an `ACCEPTED` receipt and checks consensus plus the leader and agreeing validators' GenVM execution results (validators cancelled after quorum are not treated as failed transactions);
 5. refreshes the affected contract state;
 6. waits for `FINALIZED`, checks execution results again, and refreshes state;
 7. keeps an accepted transaction visible as finalization-pending on timeout instead of reporting a false failure; and
@@ -104,10 +104,10 @@ npm run build
 Current local results:
 
 - 25 contract tests passed.
-- 31 frontend tests passed.
+- 32 frontend tests passed.
 - GenVM lint, frontend lint, TypeScript compilation, and the Vite production build passed.
 
-Local tests mock web, model, wallet, and SDK behavior; they are regression evidence, not proof of a successful live dispute settlement.
+Local tests mock web, model, wallet, and SDK behavior; they are regression evidence. The Explorer transactions linked above provide the separate live settlement evidence.
 
 ## Configuration and deployment
 
@@ -119,7 +119,7 @@ Local tests mock web, model, wallet, and SDK behavior; they are regression evide
 - Evidence URLs are buyer-supplied public pages, not guaranteed authoritative sources. They can change or disappear and are not content-addressed.
 - No buyer-confirmation, cancellation, deadline, timeout settlement, or emergency recovery flow exists.
 - Two undetermined attempts can leave escrow locked.
-- The production contract has a verified deployment and state read, but no production order, accepted dispute verdict, or payout transaction has been verified yet.
+- Only one supervised production dispute has been verified, covering the 100% material-mismatch tier; the 0% and 50% tiers have only local test coverage.
 - A previous test instance contains two funded orders and three undetermined dispute attempts; its state and balance do not migrate to this deployment.
 - The production bundle currently emits a non-blocking large-chunk warning.
 - Studionet is a test environment and the contract has not received a production security audit.

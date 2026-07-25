@@ -483,6 +483,68 @@ describe('useGenDispute Hook', () => {
       expect(result.current.uiState).toBe('PAID_OUT')
     })
 
+    it('ignores validators cancelled after an accepted quorum is reached', async () => {
+      const mockWriteContract = vi.mocked(client.writeContract)
+      mockWriteContract.mockResolvedValue('0xtxhash')
+
+      const receiptWithIdleValidators = {
+        ...successfulReceipt(),
+        consensus_data: {
+          leader_receipt: [
+            {
+              mode: 'leader',
+              execution_result: 'SUCCESS',
+              genvm_result: { error_code: null, raw_error: null },
+            },
+          ],
+          validators: [
+            {
+              mode: 'validator',
+              vote: 'agree',
+              execution_result: 'SUCCESS',
+              genvm_result: { error_code: null, raw_error: null },
+            },
+            {
+              mode: 'validator',
+              vote: 'idle',
+              execution_result: 'ERROR',
+              genvm_result: {
+                error_code: 'CONSENSUS_VALIDATOR_QUORUM_REACHED',
+                raw_error: {
+                  fatal: false,
+                  causes: ['VALIDATOR_QUORUM_REACHED'],
+                },
+              },
+            },
+          ],
+        },
+      }
+      const mockWaitForReceipt = vi.mocked(client.waitForTransactionReceipt)
+      mockWaitForReceipt.mockResolvedValue(receiptWithIdleValidators as any)
+
+      const mockReadContract = vi.mocked(client.readContract)
+      mockReadContract.mockImplementation(async ({ functionName }: any) =>
+        functionName === 'get_order_count' ? 1 : contractOrder('PAID_OUT')
+      )
+
+      const { result } = renderHook(() => useGenDispute())
+
+      await act(async () => {
+        await result.current.connectWallet()
+      })
+
+      await act(async () => {
+        await result.current.loadOrder(0)
+      })
+
+      await act(async () => {
+        await result.current.openDispute('reason', 'https://evidence')
+      })
+
+      expect(result.current.uiState).toBe('PAID_OUT')
+      expect(result.current.errorMessage).toBe('')
+    })
+
     it('handles UNDETERMINED state outcome', async () => {
       const mockWriteContract = vi.mocked(client.writeContract)
       mockWriteContract.mockResolvedValue('0xtxhash')

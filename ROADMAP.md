@@ -1,6 +1,6 @@
 # Project Roadmap
 
-This roadmap reflects source, test, live application, and Studionet Explorer evidence reviewed on July 26, 2026. It does not claim users, traction, partnerships, or a successful live dispute settlement.
+This roadmap reflects source, test, live application, and Studionet Explorer evidence reviewed on July 26, 2026. It claims no users, traction, or partnerships; it records one supervised live dispute settlement.
 
 ## V1 Delivered
 
@@ -25,9 +25,9 @@ The deployed V1 source includes:
 | --- | --- |
 | Public source | [dietthe030-ux/gen-dispute](https://github.com/dietthe030-ux/gen-dispute) contains the reviewed contract, frontend, tests, and documentation. |
 | Local contract verification | 25/25 tests pass, including independent verdict checks and acceptance of a decisive identity mismatch when secondary fields are unknown. |
-| Local frontend verification | 31/31 tests pass; Oxlint, TypeScript compilation, and the Vite production build pass. |
+| Local frontend verification | 32/32 tests pass, including the accepted-quorum receipt regression; Oxlint, TypeScript compilation, and the Vite production build pass. |
 | Live web | [gen-dispute.vercel.app](https://gen-dispute.vercel.app) and `/docs` load and use the production Studionet contract. |
-| Studionet deployment | Explorer shows that [`0x1E877E7B333D5371a75d2EF995763bcdabaeB9cE`](https://explorer-studio.genlayer.com/address/0x1E877E7B333D5371a75d2EF995763bcdabaeB9cE) contains the reviewed source. Its [deployment transaction](https://explorer-studio.genlayer.com/tx/0x7ebe17a1815e77ffcd2e6f3587693dfd3a44e7ff475f9a05ebb90fe5e19ceab8) is finalized, successful, and accepted; `get_order_count()` returned `0`. |
+| Studionet deployment | Explorer shows that [`0x1E877E7B333D5371a75d2EF995763bcdabaeB9cE`](https://explorer-studio.genlayer.com/address/0x1E877E7B333D5371a75d2EF995763bcdabaeB9cE) contains the reviewed source. The [deployment](https://explorer-studio.genlayer.com/tx/0x7ebe17a1815e77ffcd2e6f3587693dfd3a44e7ff475f9a05ebb90fe5e19ceab8), [order creation](https://explorer-studio.genlayer.com/tx/0x6e066962310c5736670c6a20170cc61b8b81b3065e859ef78356114c33056e7f), and [dispute](https://explorer-studio.genlayer.com/tx/0x43f8916eace1c93da67ac8fe4173e85ab55e945feafd0bde094a73fcb8695e9d) are finalized, successful, and accepted; the [buyer payout](https://explorer-studio.genlayer.com/tx/0x312f9bba5a7a0663a75da2fc46a1f41924b9416fc855c164b939d6c4e200d69a) is finalized. A direct read returns one `PAID_OUT` order with refund tier `100`. |
 
 ### Current limitations
 
@@ -35,7 +35,7 @@ Other current limitations are:
 
 - Listing creation is limited to a small hardcoded fixture registry; the listing URL itself is not fetched.
 - Buyer-supplied evidence URLs are public web inputs, not guaranteed authoritative or immutable sources.
-- The production deployment has no order, accepted live verdict, or payout transaction yet.
+- The production evidence covers one supervised 100% material-mismatch refund; the 0% and 50% tiers have not been exercised live.
 - A separate previous test instance contains two funded orders and three undetermined attempts; that state does not migrate to production.
 - No buyer-confirmation, cancellation, deadline, timeout settlement, or emergency recovery path exists.
 - Two undetermined attempts can leave escrow locked.
@@ -81,10 +81,10 @@ Current evidence is separated from future targets.
 | Metric | Current evidence | Future target | Measurement |
 | --- | --- | --- | --- |
 | Contract regression reliability | 25/25 local tests pass. | All required checks pass for every release candidate. | Pinned CI logs and reviewed GenVM test output. |
-| Frontend regression reliability | 31/31 tests, lint, and build pass. | All required checks pass on every main-branch change. | CI test, lint, typecheck, and build results. |
+| Frontend regression reliability | 32/32 tests, lint, and build pass. | All required checks pass on every main-branch change. | CI test, lint, typecheck, and build results. |
 | Source-to-deployment integrity | Explorer source matches the reviewed contract and the production configuration uses the verified address. | Preserve source/address alignment for every release. | Commit hash, deployment transaction, Explorer source, and production environment review. |
-| Transaction success | The production address currently has only its successful deployment transaction; there is no production order-write denominator. | At least 95% of wallet-approved supervised writes finalize with accepted consensus, excluding user rejection. | Reconcile frontend submissions with Explorer receipts and execution results. |
-| End-to-end dispute completion | No production dispute or payout is verified. | At least 10 supervised finalized disputes after lifecycle hardening, including evidence for every supported tier. | Explorer transactions and post-transaction contract-state reconciliation. |
+| Transaction success | Both wallet-approved production writes in the single supervised flow finalized with successful execution and accepted consensus; this sample is too small for a reliability rate. | At least 95% of wallet-approved supervised writes finalize with accepted consensus, excluding user rejection. | Reconcile frontend submissions with Explorer receipts and execution results. |
+| End-to-end dispute completion | One production order reached `PAID_OUT`; the 100% buyer refund and transfer are verified. | At least 10 supervised finalized disputes after lifecycle hardening, including evidence for every supported tier. | Explorer transactions and post-transaction contract-state reconciliation. |
 | Order selection correctness | Automated tests cover explicit lookup and wallet-change clearing. | Zero unintended retained selections during the pilot. | Account-change tests and consent-based pilot issue logs. |
 | Fund safety | The production contract balance is 0 GEN. The previous test instance still holds 0.20 GEN across two open orders. | Zero unreconciled production balances and a documented result for every terminal and recovery state. | Contract balance reconciliation, state monitoring, and incident records. |
 | Initial reach | No verified users or community count. | 25 qualified pilot wallets and 10 participants completing a second supported flow within 30 days. | Deduplicated opt-in pilot cohorts excluding team and automated wallets. |
@@ -92,14 +92,14 @@ Current evidence is separated from future targets.
 
 ## Future Updates
 
-### Phase 1: Verify funded end-to-end transactions
+### Phase 1: Broaden funded end-to-end coverage
 
-- **Problem:** Source and deployment now align, but no funded production order, accepted verdict, or payout has been recorded on the new instance.
-- **User value:** Reviewers and users can verify the complete workflow rather than deployment alone.
-- **Changes:** Use listing-aware, fact-only evidence fixtures for low-value dispute/payout smoke tests and preserve Explorer evidence.
+- **Problem:** One 100% refund is verified, but the 0% and 50% paths and repeated-flow reliability are not yet demonstrated live.
+- **User value:** Reviewers and users can verify all bounded settlement outcomes instead of one path.
+- **Changes:** Run supervised low-value smoke tests for the remaining fixture-backed payout tiers and preserve Explorer evidence.
 - **Integrations:** GenLayer Studio, Studionet Explorer, GitHub, and Vercel.
 - **Conditions:** Passing checks, funded Studionet test wallets, and agreed evidence fixtures.
-- **Success:** Source, live address, Explorer transactions, and resulting order state all match.
+- **Success:** All three payout tiers have matching source, live address, Explorer transactions, and resulting order state.
 
 ### Phase 2: Complete escrow lifecycle and recovery
 

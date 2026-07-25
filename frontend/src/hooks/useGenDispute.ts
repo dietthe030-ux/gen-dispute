@@ -31,6 +31,15 @@ const getReceiptStatusName = (receipt: any): string =>
 const getReceiptResultName = (receipt: any): string =>
   String(receipt?.resultName ?? receipt?.result_name ?? '')
 
+const formatExecutionError = (value: unknown): string => {
+  if (typeof value === 'string') return value
+  try {
+    return JSON.stringify(value)
+  } catch {
+    return String(value)
+  }
+}
+
 const assertSuccessfulReceipt = (receipt: any) => {
   const statusName = getReceiptStatusName(receipt)
   if (
@@ -72,12 +81,22 @@ const assertSuccessfulReceipt = (receipt: any) => {
   const validators = Array.isArray(consensusData?.validators)
     ? consensusData.validators
     : []
-  const executionEntries = [...leaderReceipts, ...validators]
-  const executionResults = executionEntries
+  // Once quorum is reached, Studionet may cancel validators that are no longer
+  // needed. Those entries are reported as idle/ERROR with
+  // CONSENSUS_VALIDATOR_QUORUM_REACHED even though the accepted transaction
+  // and its leader/agreeing validators executed successfully. Only entries
+  // that contributed to the accepted result should determine UI success.
+  const decisiveExecutionEntries = [
+    ...leaderReceipts,
+    ...validators.filter(
+      (entry: any) => String(entry?.vote ?? '').toLowerCase() === 'agree'
+    ),
+  ]
+  const executionResults = decisiveExecutionEntries
     .map((entry) => entry?.execution_result ?? entry?.executionResult)
     .filter(Boolean)
 
-  const executionError = executionEntries.find((entry) => {
+  const executionError = decisiveExecutionEntries.find((entry) => {
     const genVmResult = entry?.genvm_result ?? entry?.genvmResult
     return (
       genVmResult?.error_code ||
@@ -98,7 +117,7 @@ const assertSuccessfulReceipt = (receipt: any) => {
       genVmResult?.rawError ??
       genVmResult?.error_code ??
       genVmResult?.errorCode
-    throw new Error(`Transaction execution failed: ${detail}`)
+    throw new Error(`Transaction execution failed: ${formatExecutionError(detail)}`)
   }
 
   const failedExecution = executionResults.find((result) => result !== 'SUCCESS')
