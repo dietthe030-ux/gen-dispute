@@ -5,7 +5,7 @@ import type { UIState, OrderState } from '../types'
 import { TransactionStatus, ExecutionResult } from 'genlayer-js/types'
 
 const RECEIPT_POLL_INTERVAL_MS = 3000
-const ACCEPTED_POLL_RETRIES = 20
+const ACCEPTED_POLL_RETRIES = 60
 const FINALIZED_POLL_RETRIES = 60
 
 export const FINALIZATION_PENDING_MESSAGE =

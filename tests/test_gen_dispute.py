@@ -362,6 +362,70 @@ def test_dispute_resolved_tier_100(direct_deploy, direct_vm, direct_alice, direc
     assert direct_vm._to_bytes(eth_sends[0]["address"]) == direct_bob
     assert eth_sends[0]["value"] == 1000
 
+
+def test_identity_mismatch_allows_unknown_secondary_fields(
+    direct_deploy, direct_vm, direct_alice, direct_bob
+):
+    contract = direct_deploy("contracts/gen_dispute.py")
+
+    with direct_vm.prank(direct_alice):
+        direct_vm.value = 1000
+        contract.create_order(
+            direct_bob,
+            "https://listing.url/rolex_v2",
+            "Version B: Cheap Casio watch instead of Rolex",
+            "Black Casio digital wristwatch",
+        )
+
+    direct_vm.mock_web(
+        "https://evidence.url",
+        {
+            "status": 200,
+            "body": "A vintage Rolex Submariner was delivered. No Casio watch was present.",
+        },
+    )
+    identity_mismatch_output = {
+        "item_identity": "MISMATCH",
+        "condition": "UNKNOWN",
+        "included_items": "UNKNOWN",
+        "evidence_sufficient": True,
+        "refund_tier": 100,
+        "reason_code": "MATERIAL_MISMATCH",
+        "summary": "A Rolex was delivered instead of the listed Casio watch.",
+        "listing_facts": ["Casio digital watch"],
+        "evidence_facts": ["Rolex Submariner delivered"],
+    }
+    direct_vm.mock_llm(r".*", json.dumps(identity_mismatch_output))
+
+    eth_sends = []
+
+    def gl_call_hook(vm, request):
+        if "EthSend" in request:
+            eth_sends.append(request["EthSend"])
+            return {"ok": None}
+        return None
+
+    direct_vm._gl_call_hook = gl_call_hook
+
+    with direct_vm.prank(direct_bob):
+        contract.open_dispute(
+            0,
+            "A Rolex was delivered instead of the listed Casio watch",
+            "https://evidence.url",
+        )
+
+    assert direct_vm.run_validator() is True
+
+    order = contract.get_order(0)
+    assert order["status"] == "PAID_OUT"
+    assert order["refund_tier"] == 100
+    assert order["buyer_payout"] == 1000
+    assert order["seller_payout"] == 0
+    assert order["outcome"] == "MATERIAL_MISMATCH"
+    assert len(eth_sends) == 1
+    assert direct_vm._to_bytes(eth_sends[0]["address"]) == direct_bob
+    assert eth_sends[0]["value"] == 1000
+
 def test_undetermined_consensus_failure(direct_deploy, direct_vm, direct_alice, direct_bob):
     contract = direct_deploy("contracts/gen_dispute.py")
     

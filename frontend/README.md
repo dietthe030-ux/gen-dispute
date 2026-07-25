@@ -26,10 +26,10 @@ For `create_order` and `open_dispute`, the app switches to Studionet, submits `c
 The production frontend is configured for:
 
 ```text
-0xD37A4f08C46397da6Efa87a0009F4516B925A5f5
+0x1E877E7B333D5371a75d2EF995763bcdabaeB9cE
 ```
 
-Explorer verifies that the deployed source contains the independent validator reevaluation used by this repository. It currently shows two funded orders. The first live dispute attempt finalized with successful GenVM execution but undetermined consensus, so the contract kept both order states unchanged and emitted no payout.
+Explorer shows that the address above contains the reviewed contract source, including the decisive identity-mismatch validation rule. Its deployment transaction is finalized, successful, and accepted; `get_order_count()` returned `0` after deployment.
 
 Copy `.env.example` to the gitignored `.env`, then set `VITE_CONTRACT_ADDRESS` to the exact verified address above. Use the same value in the linked Vercel project. Never commit `.env` or use a placeholder address.
 

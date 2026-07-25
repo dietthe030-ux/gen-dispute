@@ -255,7 +255,7 @@ describe('useGenDispute Hook', () => {
         hash: '0xtxhash',
         status: TransactionStatus.ACCEPTED,
         interval: 3000,
-        retries: 20,
+        retries: 60,
       })
 
       expect(mockWaitForReceipt).toHaveBeenNthCalledWith(2, {
