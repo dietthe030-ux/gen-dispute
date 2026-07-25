@@ -2,6 +2,8 @@
 
 GenDispute is an evidence-aware GEN escrow prototype for item-not-as-described disputes on GenLayer Studionet. A seller creates an order and locks GEN for a named buyer. If the buyer disputes the delivery, the Intelligent Contract evaluates public evidence and settles a fixed 0%, 50%, or 100% buyer refund.
 
+![GenDispute production application](docs/gen-dispute-live.png)
+
 ## Trust problem
 
 An escrow contract can hold funds and enforce access control, but a conventional deterministic contract cannot decide whether public evidence shows that an item matches its listing. Sending that decision to one marketplace administrator or one hosted LLM API creates a new trusted party that can change its model, prompt, or result without validator agreement.
