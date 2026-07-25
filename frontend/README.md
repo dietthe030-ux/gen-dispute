@@ -1,36 +1,37 @@
 # GenDispute Frontend
 
-The frontend is a React 19, TypeScript, and Vite interface for the GenDispute multi-order Intelligent Contract.
-
-## User flow
-
-1. Connect an injected browser wallet.
-2. Approve or add GenLayer Studionet.
-3. Enter a known order ID to inspect it, or create a new escrow order.
-4. The selected order determines whether the wallet is the Buyer, Seller, or Observer.
-5. Only the selected order's buyer sees the dispute action.
-6. Transaction progress continues through accepted consensus and finalization.
-
-Changing accounts clears the selected order. The interface never assumes that a connected wallet owns or should view order `0`.
+This directory contains the React 19, TypeScript, and Vite interface for the GenDispute multi-order Intelligent Contract. It uses `genlayer-js` with an injected EIP-1193 wallet.
 
 ## Routes
 
-- `/` — wallet, order lookup, escrow creation, dispute, and settlement interface.
-- `/docs` — product, architecture, security, and multi-order contract documentation.
+- `/` - connect a wallet, create an escrow, load an explicit order ID, open an eligible dispute, and inspect settlement state.
+- `/docs` - project, trust model, consensus, payout tiers, and contract reference.
 
 `vercel.json` rewrites direct route requests to the Vite entry point.
 
-## Configuration
+## Wallet and order behavior
 
-The verified multi-order Studionet deployment is:
+1. The app requests or adds GenLayer Studionet (`61999`).
+2. A connected wallet can create an order or load a known order ID.
+3. The selected order determines whether the wallet is the buyer, seller, or an observer.
+4. Only the selected order's buyer receives the dispute action.
+5. Account changes clear the selected order. The app never assumes that a new wallet owns or should view order `0`.
+
+## Transaction lifecycle
+
+For `create_order` and `open_dispute`, the app switches to Studionet, submits `client.writeContract`, and shows the transaction hash while consensus is pending. It waits for `ACCEPTED`, checks consensus and GenVM execution results, refreshes contract state, then waits for `FINALIZED` and checks execution again. A finalization timeout remains visible as accepted/pending rather than being reported as a failed write. Wallet rejection, RPC, validation, consensus, and execution errors are shown in the transaction panel.
+
+## Contract configuration
+
+The production frontend is configured for:
 
 ```text
-0xef5663Ae20d8604bc57Bcf87c691ffc64c73CAA7
+0xD37A4f08C46397da6Efa87a0009F4516B925A5f5
 ```
 
-Configure that exact address in the gitignored local `.env` and the matching Vercel environment. Do not configure the legacy single-order address for this frontend release. Do not commit `.env`; `.env.example` intentionally contains no address.
+Explorer verifies that the deployed source contains the independent validator reevaluation used by this repository. The deployment transaction is finalized and successful, and a direct `get_order_count()` read returned `0`.
 
-Production: [gen-dispute.vercel.app](https://gen-dispute.vercel.app)
+Copy `.env.example` to the gitignored `.env`, then set `VITE_CONTRACT_ADDRESS` to the exact verified address above. Use the same value in the linked Vercel project. Never commit `.env` or use a placeholder address.
 
 ## Commands
 
@@ -42,10 +43,11 @@ npm run lint
 npm run build
 ```
 
-Current verified results:
+Current local verification:
 
 - 27 frontend tests passed.
-- Lint completed with zero errors.
-- TypeScript compilation and Vite production build succeeded.
+- Oxlint completed with zero errors.
+- TypeScript compilation and the Vite production build succeeded.
+- The production build reports a non-blocking large-chunk warning.
 
-The production build currently reports a non-blocking large-chunk warning.
+Frontend tests mock the wallet and SDK. They do not prove a live Studionet write.

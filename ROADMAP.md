@@ -1,90 +1,76 @@
 # Project Roadmap
 
-This roadmap reflects evidence reviewed on July 17, 2026. It distinguishes the preserved legacy contract from the deployed multi-order Studionet contract and production frontend. It does not claim users, traction, partnerships, or live dispute settlement without evidence.
+This roadmap reflects source, test, live application, and Studionet Explorer evidence reviewed on July 26, 2026. It does not claim users, traction, partnerships, or a live dispute settlement.
 
 ## V1 Delivered
 
-GenDispute V1 is a GenLayer Studionet escrow prototype for item-not-as-described disputes. A seller deposits native GEN for a named buyer and records an approved listing snapshot. The designated buyer can submit public evidence. GenLayer validators evaluate the mismatch and the contract restricts settlement to a 0%, 50%, or 100% buyer refund.
+GenDispute is a GenLayer Studionet escrow prototype for item-not-as-described disputes. A seller creates an isolated order, names the buyer, records a fixture-backed listing snapshot, and deposits native GEN. The named buyer can submit one or two public evidence URLs. The Intelligent Contract restricts the decision to a 0%, 50%, or 100% buyer refund, calculates complementary payouts, and emits native GEN transfers after consensus.
 
-The Intelligent Contract holds escrow, enforces participant access, preserves the listing snapshot, coordinates nondeterministic evidence evaluation, validates the verdict, calculates complementary buyer and seller payouts, and initiates native GEN transfers.
+The current source candidate includes:
 
-### Delivered and verified user flow
+- deterministic deposit, participant, state, retry, duplicate-action, and URL guards;
+- explicit multi-order storage and order-ID reads;
+- public evidence retrieval with `gl.nondet.web.get`;
+- structured semantic evaluation with `gl.nondet.exec_prompt`;
+- independent validator retrieval and reevaluation of the same evidence;
+- consensus comparison over `reason_code`, `refund_tier`, and `evidence_sufficient`, with schema and internal-consistency checks as supplemental guards;
+- React 19, TypeScript, Vite, `genlayer-js`, and injected EIP-1193 wallet integration;
+- explicit order lookup, buyer/seller/observer roles, account-change selection clearing, transaction progress, receipt execution checks, and error states; and
+- `/docs`, root and frontend setup documentation, contract tests, and frontend tests.
 
-1. Connect an injected EIP-1193 wallet.
-2. Request GenLayer Studionet, chain ID `61999`.
-3. Create an escrow with a buyer, positive GEN value, registered listing URL, matching snapshot, and item description.
-4. Read the deployed order state.
-5. If connected as the named buyer, submit one or two public evidence URLs.
-6. Track accepted consensus and finalization.
-7. Display a bounded settlement result or an undetermined result.
+### Verified evidence
 
-### Deployment evidence
-
-| Area | Current evidence |
+| Area | Evidence |
 | --- | --- |
-| Public source | [dietthe030-ux/gen-dispute](https://github.com/dietthe030-ux/gen-dispute) contains the deployed V1 source history. |
-| Live web app | [gen-dispute.vercel.app](https://gen-dispute.vercel.app) serves the multi-order frontend from the `dietthe030-ux/gen-dispute` main branch. `/` and `/docs` returned HTTP 200; the production bundle contained the multi-order address and no legacy address. |
-| Legacy Studionet contract | [`0xA10b4CCe4721ba86Ce902080a044BA5d465cEaB8`](https://explorer-studio.genlayer.com/address/0xA10b4CCe4721ba86Ce902080a044BA5d465cEaB8) is the verified V1 instance. |
-| Multi-order Studionet contract | [`0xef5663Ae20d8604bc57Bcf87c691ffc64c73CAA7`](https://explorer-studio.genlayer.com/address/0xef5663Ae20d8604bc57Bcf87c691ffc64c73CAA7) accepted a direct `get_order_count()` read and returned `0` during integration verification. |
-| Verified Studionet write | The [`create_order` transaction](https://explorer-studio.genlayer.com/tx/0x6d2ddeeaefb0ac249a9471d1b2d03f2df7e53a4f1c833678fbc6d9c49fa2d2ab) finalized successfully with 1.50 GEN. |
-| Live state observed before this redesign | The V1 contract exposed one `OPEN` order with 1.5 GEN, seller `0x277bf20771129ae224042d23b0311c1ac5a9ac1b`, buyer `0x896ef52d620ea3ccda34b4e72a8e197974e4e39e`, and zero dispute attempts. |
-| Multi-order contract verification | The release-candidate contract passed 22 of 22 local GenVM tests, including creation isolation, settlement isolation, and unknown-ID rejection. |
-| Multi-order frontend verification | The release-candidate frontend passed 27 of 27 tests; lint completed with zero errors; TypeScript and the Vite production build succeeded. |
+| Public source | [dietthe030-ux/gen-dispute](https://github.com/dietthe030-ux/gen-dispute) contains the reviewed contract, frontend, tests, and documentation. |
+| Local contract verification | 24/24 tests pass, including rejection of a schema-valid leader verdict that disagrees with an independent validator evaluation. |
+| Local frontend verification | 27/27 tests pass; Oxlint, TypeScript compilation, and the Vite production build pass. |
+| Live web | [gen-dispute.vercel.app](https://gen-dispute.vercel.app) and `/docs` load and use the production Studionet contract. |
+| Studionet deployment | Explorer shows that [`0xD37A4f08C46397da6Efa87a0009F4516B925A5f5`](https://explorer-studio.genlayer.com/address/0xD37A4f08C46397da6Efa87a0009F4516B925A5f5) contains the reviewed source. Its [deployment transaction](https://explorer-studio.genlayer.com/tx/0xb6ac673c903453abb5a522063ac9cf7b139d5c8568bb40c30c8478806671bcb5) is finalized and successful; a direct `get_order_count()` read returned `0`. |
 
-### Honest boundary between V1 and the release candidate
+### Current limitations
 
-The new Studionet contract implements the multi-order design using `DynArray[Order]` and explicit `order_id` reads and writes. The production frontend implements manual order lookup and account-change selection clearing and is configured for the new deployment.
+Other current limitations are:
 
-The legacy contract contains an open escrow and was not upgraded. Its incompatible storage layout remains isolated from the new deployment.
-
-Other V1 limitations remain:
-
-- No live dispute, verdict, or payout transaction has been independently verified on Studionet.
-- Listing creation is restricted to a small hardcoded fixture registry.
-- There is no buyer-confirmation, cancellation, deadline, timeout, or emergency recovery path.
-- Two undetermined attempts can leave an order's escrow locked.
-- Public evidence URLs may change or disappear and are not content-addressed.
-- Local contract tests mock web and model behavior; frontend tests mock the wallet and SDK.
-- No production users, recurring activity, testimonials, partnerships, or analytics have been verified.
-- The Vite build emits a non-blocking warning for a JavaScript chunk larger than 500 kB.
+- Listing creation is limited to a small hardcoded fixture registry; the listing URL itself is not fetched.
+- Buyer-supplied evidence URLs are public web inputs, not guaranteed authoritative or immutable sources.
+- No live order, dispute, verdict, or payout transaction is currently visible on the frontend-configured contract.
+- No buyer-confirmation, cancellation, deadline, timeout settlement, or emergency recovery path exists.
+- Two undetermined attempts can leave escrow locked.
+- Local contract tests mock web and model results; frontend tests mock the wallet and SDK.
+- The Vite production build reports a non-blocking large-chunk warning.
+- The prototype has not received a production security audit and is not presented as ready for high-value commerce.
 
 ## Target Users
 
-The initial target users are:
+The initial target users are buyers and sellers performing supervised, low-value peer-to-peer transactions where item identity, condition, or included accessories matter. A second target group is marketplace and GenLayer developers evaluating how evidence-aware consensus can be combined with on-chain custody and bounded settlement.
 
-- Buyers and sellers running low-value, supervised peer-to-peer transactions where item identity, condition, accessories, or provenance matter.
-- Collectible and specialty-item communities that need an explicit item-not-as-described policy.
-- Marketplace developers evaluating evidence-aware escrow without delegating the final decision to one centralized support agent.
-- GenLayer developers learning how to combine public web evidence, nondeterministic execution, deterministic verdict validation, and native asset settlement.
-
-These users need payment custody and evidence evaluation in one auditable workflow. The prototype is valuable for controlled demonstrations and pilots. It is not yet suitable for high-value or unsupervised commerce because recovery, evidence integrity, operational monitoring, and live settlement evidence remain incomplete.
+Their need is not merely fund storage. They need a decision process that can inspect public evidence without granting one marketplace administrator or one hosted LLM API sole authority over the verdict. GenDispute is currently suitable for demonstrations and controlled pilots, not unsupervised production commerce.
 
 ## Adoption Approach
 
-No current user base is claimed. The proposed adoption approach is:
+No existing user base or partner community is claimed. The proposed first-user approach is:
 
-1. Demonstrate the flow in GenLayer developer communities, hackathons, workshops, and marketplace-builder sessions.
-2. Use two supervised wallets and low-value Studionet funds to show order creation, explicit order-ID lookup, Observer access, buyer authorization, and each fixture-backed verdict.
-3. Present `/docs` before wallet signing so participants understand roles, evidence requirements, payout tiers, and limitations.
-4. Link each demo transaction to Explorer and explain accepted consensus versus finalization.
-5. Collect structured feedback on wallet setup, order discovery, evidence preparation, wait time, outcome clarity, and recovery expectations.
-6. Invite repeat use only after lifecycle and recovery controls are implemented and clearly documented.
+1. Run supervised demonstrations in GenLayer developer communities, hackathons, and marketplace-builder sessions.
+2. Use two funded Studionet wallets plus an observer wallet to demonstrate explicit order lookup, participant authorization, consensus progress, and each fixture-backed payout tier.
+3. Show the `/docs` route before signing so participants understand the evidence model, payout bounds, and current recovery limitations.
+4. Link every demonstration write to Explorer and distinguish wallet approval, `ACCEPTED`, `FINALIZED`, and successful GenVM execution.
+5. Collect structured feedback on wallet setup, evidence preparation, wait time, verdict clarity, and locked-fund recovery expectations.
 
-Early trials should become continued use only if participants can reliably find their orders, understand why a verdict was reached, recover from non-terminal states, and complete a second supervised transaction without operator intervention.
+Trial users should be invited back only after they can complete the flow without operator correction and the contract has a documented completion and recovery policy.
 
 ## Planned Integrations
 
-All entries below are future proposals.
+All integrations below are proposals, not delivered features.
 
-| Integration | Why it is needed and user value | Product or architecture impact | Conditions |
+| Integration | Why and user value | Architecture impact | Conditions |
 | --- | --- | --- | --- |
-| Content-addressed listing storage such as IPFS or Arweave | Replaces the demonstration-only fixture registry with durable listing terms. | Store and validate immutable URIs or hashes; add retrieval fallback and size policies. | Select providers, define a canonical snapshot schema, test validator retrieval, and complete privacy review. |
-| Marketplace APIs or signed listing feeds | Reduces manual data entry and establishes listing provenance. | Add adapters that normalize listing fields and bind signed or hashed snapshots to an order. | Obtain API permission, document rate limits and terms, and define update/deletion behavior. |
-| Evidence storage and attestation | Prevents evidence URLs from silently changing or expiring. | Record content hashes, timestamps, media metadata, and optional attestations. | Define supported media, retention, privacy, availability, and validator-access policies. |
-| WalletConnect-compatible adapters | Expands browser and mobile wallet coverage beyond injected providers. | Introduce a wallet abstraction while preserving `genlayer-js` signing and Studionet configuration. | Verify chain support and pass browser, mobile, account-change, and rejection tests. |
-| Explorer indexer and observability | Gives users independent transaction status and useful failure diagnostics. | Add order history, Explorer links, indexed state transitions, structured receipt logs, and alerts. | Confirm stable APIs, define privacy-preserving event schemas, and operate health checks. |
-| Notification provider | Consensus may outlast a browser session. | Send opt-in updates from indexed contract state instead of browser polling alone. | Establish an indexer, protect contact data, and define delivery retry and opt-out behavior. |
-| Pilot collector or marketplace community | Tests whether evidence standards and payout rules match a real bounded workflow. | Add category-specific listing fields, evidence guidance, transaction caps, and support procedures. | Obtain explicit pilot agreement, informed consent, safety review, and incident-response ownership. |
+| IPFS, Arweave, or another content-addressed store | Preserves listing terms and evidence used in a verdict. | Store canonical hashes or immutable URIs; add retrieval, size, and fallback policies. | Provider selection, privacy review, validator retrieval tests, and a versioned content schema. |
+| Signed marketplace listing feeds | Reduces manual entry and gives the snapshot verifiable provenance. | Add adapters that normalize and bind signed listing fields to an order. | API permission, signature policy, rate-limit handling, and update/deletion rules. |
+| Evidence timestamping or attestation | Helps detect mutated, expired, or misattributed evidence. | Record hashes, timestamps, media metadata, and optional attestations. | Supported-media policy, retention policy, privacy review, and validator availability. |
+| WalletConnect-compatible wallet layer | Expands supported desktop and mobile wallets. | Replace direct injected-provider assumptions with a tested wallet abstraction. | Confirm Studionet support and pass connect, switch, rejection, and account-change tests. |
+| Explorer/indexer and notifications | Lets users leave the page while consensus continues and later recover transaction context. | Index order state, receipt status, and opt-in notifications without making the indexer authoritative. | Stable APIs, privacy-preserving event schema, monitoring, and delivery retry policy. |
+| Bounded marketplace or collector pilot | Tests whether evidence requirements and payout tiers match a real category. | Add category-specific listing fields, caps, evidence guidance, and support procedures. | Explicit partner agreement, risk limits, incident ownership, and prior lifecycle hardening. |
 
 ## Success Metrics
 
@@ -92,60 +78,59 @@ Current evidence is separated from future targets.
 
 | Metric | Current evidence | Future target | Measurement |
 | --- | --- | --- | --- |
-| Contract regression reliability | 22/22 multi-order contract tests passed locally. | 100% of required contract checks pass for every release candidate. | Pinned CI logs and reviewed GenVM test output. |
-| Frontend regression reliability | 27/27 tests passed; lint and build succeeded. | 100% of required frontend checks pass on every main-branch change. | CI results for tests, lint, typecheck, and build. |
-| Live multi-order deployment | Contract `0xef5663Ae20d8604bc57Bcf87c691ffc64c73CAA7` is reachable and `get_order_count()` returned `0`; no live order write or dispute exists yet. | Complete supervised order creation, lookup, authorization, dispute, and payout smoke tests. | Studio and Explorer inspection plus recorded smoke-test transactions. |
-| Wallet-to-order correctness | Local UI tests confirm no default selection for a newly connected wallet. | Zero cases in pilot testing where an account switch retains an unintended selected order. | Automated account-change tests and consent-based session logs. |
-| Transaction finalization | One V1 order creation is verified; no meaningful denominator exists. | At least 95% of wallet-approved pilot writes finalize successfully, excluding user-rejected prompts. | Reconcile frontend submissions with Explorer receipts. |
-| End-to-end dispute completion | No live V1 dispute or payout has been verified. | At least 10 supervised finalized disputes, with at least two examples of each payout tier after safety hardening. | Explorer transactions and contract-state reconciliation. |
-| Fund safety | One legacy 1.5 GEN escrow remains open; no live payout evidence exists. | Zero unreconciled balances and a documented recovery outcome for every supported non-terminal state. | Balance reconciliation, state monitoring, and incident records. |
-| Initial reach | No verified user or community count. | 25 qualified pilot wallets and at least 10 participants completing a second supported transaction within 30 days. | Deduplicated wallet cohorts excluding team and automated test wallets. |
-| Integration progress | Studionet, injected wallet access, `genlayer-js`, GitHub, and Vercel are configured. | Two additional planned integrations operating with automated health checks. | Integration test suites and availability monitoring. |
-| Frontend performance | Build succeeds with a large-chunk warning; no field baseline exists. | Remove the warning and achieve p75 LCP below 2.5 seconds on the agreed mobile profile. | Bundle analysis, Lighthouse CI, and consent-based web vitals. |
+| Contract regression reliability | 24/24 local tests pass. | All required checks pass for every release candidate. | Pinned CI logs and reviewed GenVM test output. |
+| Frontend regression reliability | 27/27 tests, lint, and build pass. | All required checks pass on every main-branch change. | CI test, lint, typecheck, and build results. |
+| Source-to-deployment integrity | Explorer source and the reviewed contract match; production uses the verified address. | Preserve this alignment for every release. | Commit hash, deployment transaction, Explorer source, and production environment review. |
+| Transaction success | Existing address has only one successful deployment transaction; there is no order-write denominator. | At least 95% of wallet-approved supervised writes finalize successfully, excluding user rejection. | Reconcile frontend submissions with Explorer receipts and execution results. |
+| End-to-end dispute completion | No live dispute or payout is verified. | At least 10 supervised finalized disputes after lifecycle hardening, including evidence for every supported tier. | Explorer transactions and post-transaction contract-state reconciliation. |
+| Order selection correctness | Automated tests cover explicit lookup and wallet-change clearing. | Zero unintended retained selections during the pilot. | Account-change tests and consent-based pilot issue logs. |
+| Fund safety | No current live order balance exists on the frontend-configured address. | Zero unreconciled balances and a documented result for every terminal and recovery state. | Contract balance reconciliation, state monitoring, and incident records. |
+| Initial reach | No verified users or community count. | 25 qualified pilot wallets and 10 participants completing a second supported flow within 30 days. | Deduplicated opt-in pilot cohorts excluding team and automated wallets. |
+| Frontend performance | Build passes with a large-chunk warning; no field baseline exists. | Remove the warning and meet p75 LCP below 2.5 seconds on an agreed mobile profile. | Bundle analysis, Lighthouse CI, and consent-based web vitals. |
 
 ## Future Updates
 
-### Phase 1: Validate live multi-order transactions
+### Phase 1: Verify funded end-to-end transactions
 
-- **Problem:** The contract and frontend are deployed, but no funded multi-order creation, dispute, or payout has been recorded on the new instance.
-- **User value:** Users can create multiple isolated escrows and intentionally open a known order by ID.
-- **Changes:** Run supervised two-wallet and observer smoke tests; verify order creation, lookup, authorization, dispute, and settlement evidence.
-- **Integrations:** GenLayer Studio, Explorer, GitHub, and Vercel.
-- **Conditions:** Funded Studionet test wallets, agreed evidence fixtures, passing checks, and continued protection of the legacy escrow.
-- **Success:** Multiple live orders retain isolated state; wallet switching clears selection; unauthorized disputes fail; all production routes and checks pass.
+- **Problem:** Source and deployment now align, but no funded order, dispute, or payout has been recorded on the new instance.
+- **User value:** Reviewers and users can verify the complete workflow rather than deployment alone.
+- **Changes:** Run low-value create/read/dispute/payout smoke tests with two wallets and preserve Explorer evidence.
+- **Integrations:** GenLayer Studio, Studionet Explorer, GitHub, and Vercel.
+- **Conditions:** Passing checks, funded Studionet test wallets, and agreed evidence fixtures.
+- **Success:** Source, live address, Explorer transactions, and resulting order state all match.
 
 ### Phase 2: Complete escrow lifecycle and recovery
 
-- **Problem:** Orders require a dispute to release funds and can remain locked after repeated undetermined results.
-- **User value:** Buyers and sellers receive predictable completion, cancellation, timeout, and recovery rules.
-- **Changes:** Specify buyer confirmation, cancellation windows, deadlines, timeout settlement, and a narrowly constrained recovery mechanism; model every state transition and balance invariant.
+- **Problem:** Orders require a dispute to release funds and repeated undetermined outcomes can lock escrow.
+- **User value:** Both parties receive predictable confirmation, cancellation, timeout, and recovery rules.
+- **Changes:** Specify and implement buyer confirmation, cancellation windows, deadlines, timeout settlement, and narrowly constrained recovery.
 - **Integrations:** Explorer indexer and operational monitoring.
-- **Conditions:** Approved state-machine specification, threat review, migration strategy, and supervised recovery tests.
-- **Success:** No unreachable state in model tests, full balance reconciliation, and successful supervised timeout and recovery scenarios.
+- **Conditions:** Reviewed state-machine specification, threat model, migration plan, and balance-invariant tests.
+- **Success:** No unreachable state, full balance reconciliation, and successful supervised timeout and recovery scenarios.
 
-### Phase 3: Preserve listing and evidence integrity
+### Phase 3: Make listing and evidence inputs durable
 
-- **Problem:** Fixture listings and mutable public evidence URLs do not support open marketplace use.
-- **User value:** Parties can prove the terms and evidence used for a decision.
-- **Changes:** Version a listing schema; store content hashes or immutable URIs; add marketplace adapters, evidence timestamps, media metadata, availability checks, and stronger injection tests.
-- **Integrations:** IPFS or Arweave, marketplace APIs, and evidence attestation providers.
-- **Conditions:** Storage provider selection, API access, content limits, privacy review, and reliable validator retrieval.
-- **Success:** At least 99% valid pilot snapshot retrieval, zero verdicts referencing mutated evidence, and passing provider-adapter tests.
+- **Problem:** Fixture listings and mutable public evidence URLs cannot support open marketplace use.
+- **User value:** Parties can prove exactly which listing terms and evidence were evaluated.
+- **Changes:** Version a listing schema, bind content hashes or immutable URIs, add evidence metadata, and strengthen availability and injection tests.
+- **Integrations:** Content-addressed storage, signed marketplace feeds, and evidence attestation.
+- **Conditions:** Provider selection, privacy and retention policy, content limits, and reliable validator retrieval.
+- **Success:** No verdict references mutated evidence and all supported provider-adapter tests pass.
 
-### Phase 4: Improve operations and user access
+### Phase 4: Improve access and transaction observability
 
-- **Problem:** Browser-only polling, injected-wallet dependence, limited diagnostics, and a large bundle reduce reliability and accessibility.
-- **User value:** Users can return to transactions, receive updates, use more wallets, and understand failures.
-- **Changes:** Add indexed order history, Explorer links, wallet adapters, opt-in notifications, privacy-preserving analytics, structured errors, and route-level code splitting.
-- **Integrations:** WalletConnect-compatible wallets, Explorer/indexer APIs, telemetry, and notifications.
-- **Conditions:** Privacy policy, event schema, stable provider APIs, multi-device tests, and performance budgets.
-- **Success:** At least 95% successful wallet-approved finalization, no lost selected-order context within supported sessions, and p75 LCP below 2.5 seconds.
+- **Problem:** Browser-only polling, injected-wallet dependence, and limited diagnostics make long consensus flows harder to resume.
+- **User value:** Users can return to a transaction, use more wallets, and understand failures.
+- **Changes:** Add indexed order history, Explorer links, wallet adapters, opt-in notifications, structured diagnostics, and route-level code splitting.
+- **Integrations:** WalletConnect-compatible wallets, Explorer/indexer APIs, and a notification provider.
+- **Conditions:** Stable APIs, privacy policy, event schema, mobile tests, and performance budgets.
+- **Success:** Pilot finalization and selection-integrity targets are met and the bundle warning is removed.
 
-### Phase 5: Controlled pilot and protocol readiness
+### Phase 5: Run a controlled category pilot
 
-- **Problem:** Local correctness does not prove that evidence burdens, verdict categories, and payout policies meet real user expectations.
-- **User value:** A bounded pilot validates the workflow while limiting financial and operational risk.
-- **Changes:** Select one item category, cap value, publish evidence standards, review outcomes, commission an independent security assessment, version settlement policies, and publish integration guidance.
-- **Integrations:** One approved collector or marketplace community, security reviewers, support tools, and developer tooling.
-- **Conditions:** Completion of prior phases, explicit pilot agreement, incident response, audit budget, and clear governance ownership.
-- **Success:** Pilot targets in Success Metrics are met, zero unrecoverable fund-loss incidents occur, no critical audit finding remains unresolved, and expansion is supported by measured repeat use.
+- **Problem:** Local correctness does not prove that evidence burdens and payout tiers match real user expectations.
+- **User value:** A bounded pilot tests the workflow while limiting financial and operational risk.
+- **Changes:** Select one item category, cap value, publish evidence standards, review outcomes, commission an independent security assessment, and version settlement policy.
+- **Integrations:** One approved marketplace or collector community, security reviewers, and support tooling.
+- **Conditions:** Completion of prior phases, explicit pilot agreement, incident response, audit budget, and governance ownership.
+- **Success:** Pilot targets are met, no unrecoverable fund-loss incident occurs, and no critical audit finding remains unresolved.

@@ -180,8 +180,8 @@ export const DocsPage = () => {
           <div className="technology-lead">
             <h2 id="technology-title">Built for verifiable judgment</h2>
             <p>
-              The architecture separates semantic evaluation from deterministic validation,
-              custody, and payout arithmetic.
+              The architecture separates semantic evaluation from deterministic guards,
+              independent validator checks, custody, and payout arithmetic.
             </p>
           </div>
           <div className="technology-stack">
@@ -196,7 +196,10 @@ export const DocsPage = () => {
             <article>
               <span>Consensus layer</span>
               <h3>GenLayer validators</h3>
-              <p>Read public evidence and compare it with the immutable listing snapshot.</p>
+              <p>
+                Independently fetch the same public evidence, rerun the evaluation, and compare
+                stable decision fields with the leader result.
+              </p>
             </article>
             <article>
               <span>Application layer</span>
@@ -244,8 +247,11 @@ export const DocsPage = () => {
               <p>Instructions inside evidence pages are treated as untrusted content.</p>
             </article>
             <article>
-              <h3>Validated output schema</h3>
-              <p>Invalid or contradictory consensus output cannot trigger a payout.</p>
+              <h3>Independent validator check</h3>
+              <p>
+                Schema checks reject malformed output; validators also repeat the evidence task
+                before a verdict can trigger payout.
+              </p>
             </article>
           </div>
         </section>
@@ -255,25 +261,26 @@ export const DocsPage = () => {
             <h2 id="contract-title">Contract reference</h2>
             <p>
               The application reads the deployment configured for its current environment.
-              Each deployment exposes independent orders numbered from zero.
+              Each deployment exposes independent orders numbered from zero. Confirm the shown
+              address and its source revision in Explorer before signing.
             </p>
             <code>{CONTRACT_ADDRESS || 'Contract not configured'}</code>
           </div>
           <div className="method-reference" aria-label="Contract methods">
             <div>
-              <code>create_order(...) → order_id</code>
+              <code>create_order(...) -&gt; u256 order_id</code>
               <span>Payable seller write; appends an isolated order</span>
             </div>
             <div>
-              <code>get_order_count()</code>
+              <code>get_order_count() -&gt; int</code>
               <span>Public order count read</span>
             </div>
             <div>
-              <code>get_order(order_id)</code>
+              <code>get_order(order_id) -&gt; dict</code>
               <span>Public state read for one order</span>
             </div>
             <div>
-              <code>open_dispute(order_id, ...)</code>
+              <code>open_dispute(order_id, ...) -&gt; None</code>
               <span>Buyer evidence write for one order</span>
             </div>
           </div>

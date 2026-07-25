@@ -584,6 +584,122 @@ def test_validator_rejects_insufficient_evidence(direct_deploy, direct_vm, direc
         
     assert direct_vm.run_validator() is False
 
+
+def test_validator_rejects_schema_valid_leader_verdict_that_independent_check_disagrees_with(
+    direct_deploy, direct_vm, direct_alice, direct_bob
+):
+    contract = direct_deploy("contracts/gen_dispute.py")
+
+    with direct_vm.prank(direct_alice):
+        direct_vm.value = 1000
+        contract.create_order(
+            direct_bob,
+            "https://listing.url",
+            "Vintage Rolex Submariner watch in excellent condition",
+            "Vintage Watch"
+        )
+
+    direct_vm.mock_web(
+        "https://evidence.url",
+        {"status": 200, "body": "A cheap Casio digital watch was delivered instead of the listed Rolex."}
+    )
+
+    leader_output = {
+        "item_identity": "MATCH",
+        "condition": "MATCH",
+        "included_items": "MATCH",
+        "evidence_sufficient": True,
+        "refund_tier": 0,
+        "reason_code": "MATCHES_DESCRIPTION",
+        "summary": "The delivered item matches the listing.",
+        "listing_facts": ["Rolex Submariner"],
+        "evidence_facts": ["Rolex Submariner received"],
+    }
+    validator_output = {
+        "item_identity": "MISMATCH",
+        "condition": "MATCH",
+        "included_items": "MATCH",
+        "evidence_sufficient": True,
+        "refund_tier": 100,
+        "reason_code": "MATERIAL_MISMATCH",
+        "summary": "The evidence shows a different watch model.",
+        "listing_facts": ["Rolex Submariner"],
+        "evidence_facts": ["Casio digital watch received"],
+    }
+    direct_vm.mock_llm(r".*", json.dumps(leader_output))
+
+    with direct_vm.prank(direct_bob):
+        contract.open_dispute(0, "A different watch was delivered", "https://evidence.url")
+
+    # Direct mode captures the leader result. Replace the mocks before running
+    # the validator to model an independent validator evaluation.
+    direct_vm.clear_mocks()
+    direct_vm.mock_web(
+        "https://evidence.url",
+        {"status": 200, "body": "A cheap Casio digital watch was delivered instead of the listed Rolex."}
+    )
+    direct_vm.mock_llm(r".*", json.dumps(validator_output))
+
+    assert direct_vm.run_validator() is False
+
+
+def test_validator_accepts_matching_decision_fields_with_different_summary_text(
+    direct_deploy, direct_vm, direct_alice, direct_bob
+):
+    contract = direct_deploy("contracts/gen_dispute.py")
+
+    with direct_vm.prank(direct_alice):
+        direct_vm.value = 1000
+        contract.create_order(
+            direct_bob,
+            "https://listing.url/rolex_v1",
+            "Version A: Rolex watch including original box and papers",
+            "Vintage Watch"
+        )
+
+    direct_vm.mock_web(
+        "https://evidence.url",
+        {"status": 200, "body": "The Rolex arrived without its original box and papers."}
+    )
+
+    leader_output = {
+        "item_identity": "MATCH",
+        "condition": "MATCH",
+        "included_items": "PARTIAL_MISMATCH",
+        "evidence_sufficient": True,
+        "refund_tier": 50,
+        "reason_code": "PARTIAL_MISMATCH",
+        "summary": "The listed accessories are missing.",
+        "listing_facts": ["Original box and papers included"],
+        "evidence_facts": ["Box and papers not delivered"],
+    }
+    validator_output = {
+        "item_identity": "MATCH",
+        "condition": "MATCH",
+        "included_items": "PARTIAL_MISMATCH",
+        "evidence_sufficient": True,
+        "refund_tier": 50,
+        "reason_code": "PARTIAL_MISMATCH",
+        "summary": "A partial refund is justified because key accessories are absent.",
+        "listing_facts": ["Listing promises accessories"],
+        "evidence_facts": ["Evidence reports missing accessories"],
+    }
+    direct_vm.mock_llm(r".*", json.dumps(leader_output))
+    direct_vm._gl_call_hook = lambda _vm, request: {"ok": None} if "EthSend" in request else None
+
+    with direct_vm.prank(direct_bob):
+        contract.open_dispute(0, "The accessories are missing", "https://evidence.url")
+
+    direct_vm.clear_mocks()
+    direct_vm.mock_web(
+        "https://evidence.url",
+        {"status": 200, "body": "The Rolex arrived without its original box and papers."}
+    )
+    direct_vm.mock_llm(r".*", json.dumps(validator_output))
+
+    assert direct_vm.run_validator() is True
+    assert contract.get_order(0)["refund_tier"] == 50
+
 def test_listing_snapshot_immutability(direct_deploy, direct_vm, direct_alice, direct_bob):
     contract = direct_deploy("contracts/gen_dispute.py")
     
@@ -619,7 +735,7 @@ def test_listing_snapshot_immutability(direct_deploy, direct_vm, direct_alice, d
     def mock_llm_handler(prompt_data):
         prompt = prompt_data.get("prompt", "")
         captured_prompts.append(prompt)
-        return json.dumps(llm_output)
+        return {"ok": llm_output}
     direct_vm._live_llm_handler = mock_llm_handler
     
     # 2. Open dispute
@@ -630,9 +746,10 @@ def test_listing_snapshot_immutability(direct_deploy, direct_vm, direct_alice, d
     assert direct_vm.run_validator() is True
     
     # 4. Verify evaluation used Version A snapshot
-    assert len(captured_prompts) == 1
-    assert "Version A: Rolex watch" in captured_prompts[0]
-    assert "Version B:" not in captured_prompts[0]
+    assert len(captured_prompts) == 2
+    for prompt in captured_prompts:
+        assert "Version A: Rolex watch" in prompt
+        assert "Version B:" not in prompt
 
 def test_missing_evidence(direct_deploy, direct_vm, direct_alice, direct_bob):
     contract = direct_deploy("contracts/gen_dispute.py")
