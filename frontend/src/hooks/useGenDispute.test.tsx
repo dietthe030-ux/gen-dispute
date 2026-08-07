@@ -121,6 +121,50 @@ describe('useGenDispute Hook', () => {
       expect(result.current.account).toEqual({ address: '0x1122334455667788990011223344556677889900' })
       expect(result.current.uiState).toBe('RETRY_AVAILABLE')
       expect(result.current.errorMessage).toBe('')
+      expect(mockRequest).toHaveBeenCalledWith({
+        method: 'personal_sign',
+        params: [
+          'Sign to connect to GenDispute on Studionet. This does not submit a transaction.',
+          '0x1122334455667788990011223344556677889900',
+        ],
+      })
+    })
+
+    it('requires a new signature after an explicit disconnect', async () => {
+      const mockRequest = (window as any).ethereum.request
+      mockRequest.mockImplementation(async ({ method }: any) => {
+        if (method === 'eth_chainId') return '0xf22f'
+        if (method === 'eth_requestAccounts') return ['0x1122334455667788990011223344556677889900']
+        if (method === 'personal_sign') return '0xsigned'
+        return null
+      })
+
+      const { result } = renderHook(() => useGenDispute())
+
+      await act(async () => result.current.connectWallet())
+      act(() => result.current.disconnectWallet())
+      await act(async () => result.current.connectWallet())
+
+      expect(mockRequest.mock.calls.filter(([request]: any[]) => request.method === 'personal_sign')).toHaveLength(2)
+      expect(result.current.account).toEqual({ address: '0x1122334455667788990011223344556677889900' })
+    })
+
+    it('stays disconnected when the signature is rejected', async () => {
+      const mockRequest = (window as any).ethereum.request
+      mockRequest.mockImplementation(async ({ method }: any) => {
+        if (method === 'eth_chainId') return '0xf22f'
+        if (method === 'eth_requestAccounts') return ['0x1122334455667788990011223344556677889900']
+        if (method === 'personal_sign') throw new Error('User rejected signature')
+        return null
+      })
+
+      const { result } = renderHook(() => useGenDispute())
+
+      await act(async () => result.current.connectWallet())
+
+      expect(result.current.account).toBeNull()
+      expect(result.current.uiState).toBe('ERROR')
+      expect(result.current.errorMessage).toBe('User rejected signature')
     })
 
     it('handles missing browser wallet provider', async () => {
@@ -158,7 +202,7 @@ describe('useGenDispute Hook', () => {
       expect(result.current.errorMessage).toBe('User rejected chain switch')
     })
 
-    it('clears the selected order when the wallet account changes', async () => {
+    it('disconnects when the wallet account changes so the new account must sign', async () => {
       const mockRequest = (window as any).ethereum.request
       mockRequest.mockImplementation(async ({ method }: any) => {
         if (method === 'eth_chainId') return '0xf22f'
@@ -188,6 +232,9 @@ describe('useGenDispute Hook', () => {
 
       expect(result.current.selectedOrderId).toBeNull()
       expect(result.current.orderState).toBeNull()
+      expect(result.current.account).toBeNull()
+      expect(result.current.uiState).toBe('DISCONNECTED')
+      expect(result.current.errorMessage).toBe('Account changed. Sign again to reconnect.')
     })
   })
 
@@ -537,8 +584,6 @@ describe('useGenDispute Hook', () => {
               execution_result: 'SUCCESS',
               genvm_result: { error_code: null, raw_error: null },
             },
-          ],
-          validators: [
             {
               mode: 'validator',
               vote: 'agree',
@@ -558,6 +603,7 @@ describe('useGenDispute Hook', () => {
               },
             },
           ],
+          validators: [],
         },
       }
       const mockWaitForReceipt = vi.mocked(client.waitForTransactionReceipt)

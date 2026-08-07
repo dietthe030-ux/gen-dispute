@@ -8,14 +8,17 @@
 | Submission category | Project |
 | Prior anonymous-reviewed commit | `f3e81b81221b7ae7b04bb5bbcbbb4c9bd3d86c58` (`CHANGES REQUIRED`) |
 | Prior reviewed contract SHA-256 | `78d7d013ddc747a9776468ee01194744d2d86363e0c18f8dd4a58c2ae8604515` |
+| Approved PRE_DEPLOY commit | `a350de3db6fea88918cb55110225e9cb9f90b6d1` (`APPROVED`) |
 | Exact reviewed revision | Supplied by `git rev-parse HEAD` in each checkpoint package; it is not self-embedded because editing this file changes the commit hash. |
 | Contract source SHA-256 | `9b1cece7f2feb3af52817bce8e0be62d02f5e493da1671557fa6269faca35a23` |
 | Network | GenLayer Studionet, chain ID `61999` |
 | Deployment classification | Upgradable through GenLayer Root Slot |
 | Selected deployer/upgrader | `0xbf90af1bc61314775d57b641b89c1f702a93b40d` |
+| Replacement contract | `0xd5DBaE8c1A1B2A8F34dba3e4AdC62f9263EaB53d` |
+| Deployment transaction | `0x13c21f3c5d5aea282fda77c0c8d503cee8c1aff2093e6ca0b5efc11224e4a73e` |
 | Local gate audit | `PASS` |
 
-The release candidate is locally verified but not yet deployed. The submitted V1 contract at `0x1E877E7B333D5371a75d2EF995763bcdabaeB9cE` is frozen and does not contain this remediation source. It remains historical evidence only.
+The release candidate is deployed on Studionet. The deployment is `FINALIZED`, has successful GenVM execution and majority agreement, and its deployed source SHA-256 exactly matches the approved contract source. Independent readback returns `0xbf90af1bc61314775d57b641b89c1f702a93b40d` from both `get_upgrader()` and `get_evidence_issuer()`. Full live workflow verification remains in progress.
 
 ## Reviewer-requested remediation
 
@@ -54,7 +57,7 @@ Results:
 
 - Contract: `47 passed`.
 - GenVM: lint passed, validation passed, 10 public methods detected.
-- Frontend: `36 passed` across 4 test files.
+- Frontend: `38 passed` across 4 test files.
 - Oxlint: zero errors.
 - TypeScript and Vite production build: passed.
 - Repository gate audit: `PASS`.
@@ -78,16 +81,16 @@ Contract tests use an isolated WSL environment with `genlayer-test==0.29.2`. Web
 
 ## Frontend safety coverage
 
-- Studionet connection and network-switch failures;
+- Studionet connection, mandatory per-connect wallet signatures, signature rejection, reconnect-after-disconnect, and network-switch failures;
 - explicit order lookup and account-change selection clearing;
 - exact `create_order` return decoding under a simulated concurrent count race;
-- accepted, finalized, majority-disagree, undetermined, execution-error, and finalization-timeout handling;
+- accepted, finalized, majority-disagree, undetermined, execution-error, finalization-timeout, and post-quorum idle-validator handling, including the live RPC `leader_receipt` shape;
 - normal buyer release and expired recovery writes;
 - buyer reason-only dispute UI with no outcome/evidence selectors, issuer receipt registration, and reviewer-facing `/docs` content.
 
 ## Deployment and recovery gate
 
-The user selected and confirmed the external deployment wallet `0xbf90af1bc61314775d57b641b89c1f702a93b40d`. The replacement deployment remains blocked until the anonymous co-review AI returns `APPROVED` for the exact `PRE_DEPLOY` revision and evidence package. At deployment, the selected wallet must send the deployment transaction, become both upgrader and evidence issuer, and be independently read back through `get_upgrader()` and `get_evidence_issuer()`.
+The anonymous co-review AI approved the exact `PRE_DEPLOY` revision and source hash. The selected wallet `0xbf90af1bc61314775d57b641b89c1f702a93b40d` deployed the replacement contract and was independently read back as both Root Slot upgrader and evidence issuer. Progression is now gated by the `POST_DEPLOY_TEST` live proof matrix.
 
 ### Draft deployment manifest
 
@@ -113,14 +116,21 @@ The final manifest must add the actual deployment address, Explorer link, deploy
 
 **Studionet/network-state reset:** treat the prior address and state as unrecoverable. Redeploy the exact recorded source with no constructor arguments from the selected wallet, verify `FINALIZED`, execution `SUCCESS`, deployed-source parity, and `get_upgrader()` readback, rerun the full live proof matrix, then update the frontend address and all deployment documentation. Do not present the previous address as current evidence.
 
-Before the replacement can be accepted:
+Before the replacement can pass `POST_DEPLOY_TEST`:
 
-1. deploy the exact contract source above on Studionet;
-2. verify deployment `FINALIZED`, execution `SUCCESS`, Explorer source parity, upgrader readback, and evidence-issuer readback;
+1. ~~deploy the exact contract source above on Studionet~~ — completed at `0xd5DBaE8c1A1B2A8F34dba3e4AdC62f9263EaB53d`;
+2. ~~verify deployment `FINALIZED`, execution `SUCCESS`, Explorer source parity, upgrader readback, and evidence-issuer readback~~ — completed;
 3. rehearse authorized upgrade and unauthorized rejection on a separate throwaway deployment;
 4. prove exact-ID order creation, buyer confirmation, evidence-bound dispute settlement, and expiry recovery with transaction receipts and state readback;
 5. update the frontend environment to the verified replacement address and verify the live application;
 6. update this file with the replacement contract, deployment transaction, proof matrix, and final exact release commit.
+
+### Replacement live evidence collected
+
+- Deployment: [`0x13c21f3c5d5aea282fda77c0c8d503cee8c1aff2093e6ca0b5efc11224e4a73e`](https://explorer-studio.genlayer.com/tx/0x13c21f3c5d5aea282fda77c0c8d503cee8c1aff2093e6ca0b5efc11224e4a73e) — `FINALIZED`, `MAJORITY_AGREE`, decisive executions `SUCCESS`.
+- Order `0` creation: [`0x47820c92ffe2cd7bd5820faca69cf98ad019b5727eb6c2b2f461b847100747f1`](https://explorer-studio.genlayer.com/tx/0x47820c92ffe2cd7bd5820faca69cf98ad019b5727eb6c2b2f461b847100747f1) — seller `0x0d4b...d563`, buyer `0x7885...2339`, `0.1 GEN`, `FINALIZED`, `MAJORITY_AGREE`, leader and three agreeing validators `SUCCESS`.
+- Order `0` readback: `OPEN`, `0.1 GEN` escrow, Casio Version B listing, zero dispute attempts, no receipt yet.
+- The RPC returned two post-quorum validators as `idle` with `CONSENSUS_VALIDATOR_QUORUM_REACHED`; they did not contribute to the accepted result. The frontend now ignores those non-decisive entries and has a regression matching this live receipt shape.
 
 ## Historical V1 evidence
 

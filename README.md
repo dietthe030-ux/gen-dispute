@@ -9,12 +9,12 @@ GenDispute is a seller-funded GEN escrow prototype for item-not-as-described tra
 | Item | Link | Current status |
 | --- | --- | --- |
 | Web application | [gen-dispute.vercel.app](https://gen-dispute.vercel.app) | Public V1 at `/` with reviewer documentation at `/docs` |
-| Submitted V1 contract | [`0x1E877E7B333D5371a75d2EF995763bcdabaeB9cE`](https://explorer-studio.genlayer.com/address/0x1E877E7B333D5371a75d2EF995763bcdabaeB9cE) | Historical deployment and settlement evidence for the submitted V1 |
+| Replacement contract | [`0xd5DBaE8c1A1B2A8F34dba3e4AdC62f9263EaB53d`](https://explorer-studio.genlayer.com/address/0xd5DBaE8c1A1B2A8F34dba3e4AdC62f9263EaB53d) | Remediation source deployed on Studionet; live workflow verification is in progress |
 | Source repository | [dietthe030-ux/gen-dispute](https://github.com/dietthe030-ux/gen-dispute) | Public repository before the remediation release |
 | Verification record | [docs/VERIFICATION.md](docs/VERIFICATION.md) | Local remediation evidence and deployment gate status |
 | Network | GenLayer Studionet, chain ID `61999` | RPC `https://studio.genlayer.com/api` |
 
-The remediation source in this worktree is newer than the public V1 links above. V1 was frozen, so a replacement Studionet deployment and matching Vercel configuration are required before resubmission. No replacement address is claimed before that evidence exists.
+The replacement deployment transaction [`0x13c21f...e4a73e`](https://explorer-studio.genlayer.com/tx/0x13c21f3c5d5aea282fda77c0c8d503cee8c1aff2093e6ca0b5efc11224e4a73e) is `FINALIZED` with successful GenVM execution and majority agreement. Its deployed source SHA-256 matches `contracts/gen_dispute.py`. The public Vercel app remains on V1 until the replacement workflow passes live verification.
 
 ## Trust problem
 
@@ -91,7 +91,7 @@ Escrow conservation is deterministic: buyer share is `escrow * tier // 100`, sel
 
 For every write, the frontend:
 
-1. requests or switches the wallet to Studionet;
+1. requests or switches the wallet to Studionet and requires a `personal_sign` confirmation on every explicit connection;
 2. asks the wallet to sign and submits `client.writeContract`;
 3. displays submission and consensus-pending states;
 4. waits for `ACCEPTED` and checks consensus plus the leader and agreeing validators' GenVM execution results;
@@ -100,7 +100,7 @@ For every write, the frontend:
 7. waits for `FINALIZED`, checks execution `SUCCESS` again, and reconciles state; and
 8. keeps a timed-out finalization visible as accepted/pending rather than reporting false success.
 
-Validators cancelled after quorum are not treated as failed transactions. Wallet rejection, RPC, validation, consensus, execution, readback, and timeout errors remain visible in the transaction panel. Account changes clear the selected order.
+Validators cancelled after quorum are not treated as failed transactions, including RPC responses that place idle validator entries inside `leader_receipt`. Wallet rejection, RPC, validation, consensus, execution, readback, and timeout errors remain visible in the transaction panel. Disconnecting or changing accounts clears the session, and reconnecting always requires a new wallet signature.
 
 ## Run locally
 

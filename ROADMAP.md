@@ -1,6 +1,6 @@
 # Project Roadmap
 
-This roadmap reflects source and local verification reviewed on August 8, 2026, plus historical Studionet evidence for the submitted V1. It claims no users, traction, or partnerships. The remediation source is not described as deployed until replacement Explorer evidence exists.
+This roadmap reflects source, local verification, and the replacement Studionet deployment reviewed on August 8, 2026. It claims no users, traction, or partnerships. Full replacement workflow verification and the matching public frontend release remain in progress.
 
 ## V1 Delivered
 
@@ -22,7 +22,7 @@ The remediation build includes:
 - a Root Slot upgrader registered at deployment, with authorization and non-empty-code guards;
 - React 19, TypeScript, Vite, `genlayer-js`, and injected EIP-1193 wallet integration;
 - a reason-only buyer dispute form with no payout or evidence selection, plus a separate evidence-issuer registration form;
-- explicit order lookup, buyer/seller/evidence-issuer/observer roles, account-change selection clearing, transaction progress, receipt execution checks, and error states; and
+- explicit order lookup, buyer/seller/evidence-issuer/observer roles, mandatory per-connect wallet signatures, account-change disconnection, transaction progress, receipt execution checks, and error states; and
 - `/docs`, root and frontend setup documentation, contract tests, and frontend tests.
 
 ### Verified evidence
@@ -31,9 +31,9 @@ The remediation build includes:
 | --- | --- |
 | Public source | [dietthe030-ux/gen-dispute](https://github.com/dietthe030-ux/gen-dispute) contains the reviewed contract, frontend, tests, and documentation. |
 | Local contract verification | 47/47 tests pass, covering issuer authorization, cross-order replay rejection, buyer outcome-selection rejection, order/item/time/nonce/hash binding, hostile inputs, independent verdict checks, commitments, deadlines, release, recovery, and Root Slot authorization. |
-| Local frontend verification | 36/36 tests pass, including concurrent returned-order decoding, issuer-registration calldata, and proof that the buyer UI exposes neither outcome presets nor evidence URL inputs; Oxlint, TypeScript compilation, and the Vite production build pass. |
+| Local frontend verification | 38/38 tests pass, including concurrent returned-order decoding, mandatory reconnect signatures, live-shaped post-quorum receipt handling, issuer-registration calldata, and proof that the buyer UI exposes neither outcome presets nor evidence URL inputs; Oxlint, TypeScript compilation, and the Vite production build pass. |
 | Current public release | [gen-dispute.vercel.app](https://gen-dispute.vercel.app) and [`0x1E877E7B333D5371a75d2EF995763bcdabaeB9cE`](https://explorer-studio.genlayer.com/address/0x1E877E7B333D5371a75d2EF995763bcdabaeB9cE) remain historical V1 evidence. They do not yet prove the remediation build. |
-| Replacement deployment | Required before resubmission because the submitted V1 contract was frozen. No replacement address is claimed yet. |
+| Replacement deployment | [`0xd5DBaE8c1A1B2A8F34dba3e4AdC62f9263EaB53d`](https://explorer-studio.genlayer.com/address/0xd5DBaE8c1A1B2A8F34dba3e4AdC62f9263EaB53d) is deployed from the approved source; full live workflow verification is in progress. |
 
 ### Current limitations
 
@@ -87,12 +87,12 @@ Current evidence is separated from future targets.
 | Metric | Current evidence | Future target | Measurement |
 | --- | --- | --- | --- |
 | Contract regression reliability | 47/47 local tests pass. | All required checks pass for every release candidate. | Pinned CI logs and reviewed GenVM test output. |
-| Frontend regression reliability | 36/36 tests, lint, and build pass. | All required checks pass on every main-branch change. | CI test, lint, typecheck, and build results. |
-| Source-to-deployment integrity | The prior V1 is verified, but the remediation source still requires a replacement deployment. | Preserve source/address alignment for every release. | Commit hash, deployment transaction, Explorer source, and production environment review. |
-| Transaction success | Both wallet-approved production writes in the single supervised flow finalized with successful execution and accepted consensus; this sample is too small for a reliability rate. | At least 95% of wallet-approved supervised writes finalize with accepted consensus, excluding user rejection. | Reconcile frontend submissions with Explorer receipts and execution results. |
-| End-to-end dispute completion | One production order reached `PAID_OUT`; the 100% buyer refund and transfer are verified. | At least 10 supervised finalized disputes after lifecycle hardening, including evidence for every supported tier. | Explorer transactions and post-transaction contract-state reconciliation. |
+| Frontend regression reliability | 38/38 tests, lint, and build pass. | All required checks pass on every main-branch change. | CI test, lint, typecheck, and build results. |
+| Source-to-deployment integrity | Replacement deployed source SHA-256 exactly matches the approved local contract source; upgrader and evidence-issuer readbacks match the selected wallet. | Preserve source/address alignment for every release. | Commit hash, deployment transaction, Explorer source, and production environment review. |
+| Transaction success | The replacement deployment and first `create_order` write finalized with successful decisive executions and majority agreement; this sample is too small for a reliability rate. | At least 95% of wallet-approved supervised writes finalize with accepted consensus, excluding user rejection. | Reconcile frontend submissions with Explorer receipts and execution results. |
+| End-to-end dispute completion | Historical V1 evidence contains one `PAID_OUT` order with a 100% buyer refund. The replacement deployment currently has one `OPEN` order and no completed dispute yet. | At least 10 supervised finalized disputes after lifecycle hardening, including evidence for every supported tier. | Explorer transactions and post-transaction contract-state reconciliation. |
 | Order selection correctness | A concurrent-creation regression proves that the app uses the returned ID even when the global count advances to 12. | Zero incorrect post-create selections during the pilot. | Return-trace decoding tests and consent-based pilot issue logs. |
-| Fund safety | The production contract balance is 0 GEN. The previous test instance still holds 0.20 GEN across two open orders. | Zero unreconciled production balances and a documented result for every terminal and recovery state. | Contract balance reconciliation, state monitoring, and incident records. |
+| Fund safety | The replacement contract holds the expected `0.1 GEN` for its single `OPEN` order. Historical V1 has a zero contract balance; a separate test instance still holds `0.20 GEN` across two open orders. | Zero unreconciled production balances and a documented result for every terminal and recovery state. | Contract balance reconciliation, state monitoring, and incident records. |
 | Initial reach | No verified users or community count. | 25 qualified pilot wallets and 10 participants completing a second supported flow within 30 days. | Deduplicated opt-in pilot cohorts excluding team and automated wallets. |
 | Frontend performance | Build passes with a large-chunk warning; no field baseline exists. | Remove the warning and meet p75 LCP below 2.5 seconds on an agreed mobile profile. | Bundle analysis, Lighthouse CI, and consent-based web vitals. |
 

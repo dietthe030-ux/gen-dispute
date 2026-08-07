@@ -95,8 +95,13 @@ const assertSuccessfulReceipt = (receipt: any) => {
   // CONSENSUS_VALIDATOR_QUORUM_REACHED even though the accepted transaction
   // and its leader/agreeing validators executed successfully. Only entries
   // that contributed to the accepted result should determine UI success.
+  const decisiveLeaderReceipts = leaderReceipts.filter((entry: any) => {
+    const mode = String(entry?.mode ?? '').toLowerCase()
+    const vote = String(entry?.vote ?? '').toLowerCase()
+    return mode === 'leader' || vote === 'agree' || (!mode && !vote)
+  })
   const decisiveExecutionEntries = [
-    ...leaderReceipts,
+    ...decisiveLeaderReceipts,
     ...validators.filter(
       (entry: any) => String(entry?.vote ?? '').toLowerCase() === 'agree'
     ),
@@ -313,6 +318,14 @@ export const useGenDispute = () => {
         throw new Error('No accounts returned from wallet.')
       }
 
+      await provider.request({
+        method: 'personal_sign',
+        params: [
+          'Sign to connect to GenDispute on Studionet. This does not submit a transaction.',
+          accounts[0],
+        ],
+      })
+
       setAccount({ address: accounts[0] as Address })
       setSelectedOrderId(null)
       setOrderState(null)
@@ -337,20 +350,14 @@ export const useGenDispute = () => {
     const provider = (window as any).ethereum
     if (provider) {
       const handleAccounts = (accounts: string[]) => {
-        if (accounts.length > 0) {
-          setAccount({ address: accounts[0] as Address })
-          setSelectedOrderId(null)
-          setOrderState(null)
-          setIsRetrying(false)
-          setErrorMessage('')
-          setUiState('RETRY_AVAILABLE')
-        } else {
-          setAccount(null)
-          setSelectedOrderId(null)
-          setOrderState(null)
-          setOrderCount(null)
-          setUiState('DISCONNECTED')
-        }
+        setAccount(null)
+        setSelectedOrderId(null)
+        setOrderState(null)
+        setOrderCount(null)
+        setEvidenceIssuer('')
+        setIsRetrying(false)
+        setErrorMessage(accounts.length > 0 ? 'Account changed. Sign again to reconnect.' : '')
+        setUiState('DISCONNECTED')
       }
 
       const handleChain = () => {
