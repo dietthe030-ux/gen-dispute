@@ -106,6 +106,18 @@ export const OrderStatus: React.FC<OrderStatusProps> = ({ order }) => {
           <div className="status-label">Item description</div>
           <div className="status-value desc-text">{order.itemDescription}</div>
         </div>
+
+        <div className="status-item full-width">
+          <div className="status-label">Canonical item ID</div>
+          <div className="status-value code-font">{order.itemId}</div>
+        </div>
+
+        <div className="status-item full-width">
+          <div className="status-label">Frozen evidence policy SHA-256</div>
+          <div className="status-value code-font" title={order.evidencePolicyHash}>
+            {order.evidencePolicyHash}
+          </div>
+        </div>
       </div>
     </section>
   )

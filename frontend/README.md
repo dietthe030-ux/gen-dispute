@@ -17,6 +17,10 @@ This directory contains the React 19, TypeScript, and Vite interface for the Gen
 4. Only the selected order's buyer receives the dispute action.
 5. Account changes clear the selected order. The app never assumes that a new wallet owns or should view order `0`.
 
+## Evidence behavior
+
+The remediation contract accepts only exact GenDispute fixture URLs containing the selected `order_id` and whose canonical item, validity window, publisher metadata, and expected SHA-256 body hash were frozen into that order at creation. Preset buttons therefore use the production fixture origin even during local UI development. The interface rejects arbitrary or wrong-order URLs and displays the order's canonical item ID, frozen policy hash, observed evidence hashes, observation times, and submission commitments.
+
 ## Transaction lifecycle
 
 For every write, the app switches to Studionet, submits `client.writeContract`, and shows the transaction hash while consensus is pending. It waits for `ACCEPTED`, checks consensus and decisive GenVM execution results, then waits for `FINALIZED` and checks execution again. For `create_order`, it decodes the returned `u256` from the GenVM trace and loads that exact ID; the global count is never used to infer ownership. Validators reported as idle because quorum was already reached are not treated as failures. A finalization timeout remains visible as accepted/pending. Wallet rejection, RPC, validation, consensus, and execution errors are shown in the transaction panel.
@@ -37,7 +41,7 @@ npm run build
 
 Current local verification:
 
-- 35 frontend tests passed.
+- 36 frontend tests passed.
 - Oxlint completed with zero errors.
 - TypeScript compilation and the Vite production build succeeded.
 - The production build reports a non-blocking large-chunk warning.

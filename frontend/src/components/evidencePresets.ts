@@ -5,6 +5,27 @@ export interface EvidencePreset {
   fixture: string
 }
 
+export const EVIDENCE_ORIGIN = 'https://gen-dispute.vercel.app/fixtures/'
+
+const REGISTERED_EVIDENCE_FILES = new Set([
+  'fixture_evidence_match.html',
+  'fixture_evidence_partial.html',
+  'fixture_evidence_full_mismatch.html',
+  'fixture_prompt_injection.html',
+  'fixture_evidence_casio_match.html',
+  'fixture_evidence_casio_partial.html',
+  'fixture_evidence_rolex_instead_of_casio.html',
+  'fixture_prompt_injection_casio.html',
+])
+
+export const isRegisteredEvidenceUrl = (url: string, orderId: number): boolean => {
+  const suffix = `?order_id=${orderId}`
+  if (!url.startsWith(EVIDENCE_ORIGIN) || !url.endsWith(suffix)) return false
+  return REGISTERED_EVIDENCE_FILES.has(
+    url.slice(EVIDENCE_ORIGIN.length, -suffix.length)
+  )
+}
+
 export const getEvidencePreset = (
   listingUrl: string,
   presetType: EvidencePresetType

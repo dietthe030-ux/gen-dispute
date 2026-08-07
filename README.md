@@ -1,6 +1,6 @@
 # GenDispute
 
-GenDispute is a seller-funded GEN escrow prototype for item-not-as-described trades on GenLayer Studionet. It combines public evidence, validator consensus, and deterministic 0%, 50%, or 100% buyer refunds.
+GenDispute is a seller-funded GEN escrow prototype for item-not-as-described trades on GenLayer Studionet. It combines byte-hash-pinned demo evidence, validator consensus, and deterministic 0%, 50%, or 100% buyer refunds.
 
 ![GenDispute application](docs/gen-dispute-live.png)
 
@@ -18,15 +18,15 @@ The remediation source in this worktree is newer than the public V1 links above.
 
 ## Trust problem
 
-A deterministic escrow can hold funds and enforce access control, but it cannot decide whether public evidence shows that a delivered item matches its listing. Giving that decision to one marketplace administrator or hosted LLM API creates a new trusted party that can change the prompt, model, evidence, or verdict without validator agreement.
+A deterministic escrow can hold funds and enforce access control, but it cannot decide whether external evidence shows that a delivered item matches its listing. Giving that decision to one marketplace administrator or hosted LLM API creates a new trusted party that can change the prompt, model, evidence, or verdict without validator agreement.
 
-GenDispute keeps custody, state transitions, evidence commitments, and payout arithmetic in the Intelligent Contract. The seller controls the listing terms and deadline; the buyer controls the dispute claim and evidence URLs; neither party can supply the verdict or refund tier.
+GenDispute keeps custody, state transitions, evidence policy, commitments, and payout arithmetic in the Intelligent Contract. The seller chooses a registered listing and deadline. The buyer selects evidence from the immutable source policy frozen into that order. Neither party can supply the verdict or refund tier.
 
 ## Why GenLayer is essential
 
-The core decision combines live public web content with semantic comparison against the stored listing snapshot. The contract leader fetches evidence through `gl.nondet.web.get` and evaluates it through `gl.nondet.exec_prompt`. Validators independently repeat both operations.
+The core decision combines live HTTPS retrieval with semantic comparison against the stored listing snapshot. At creation, the order commits to evidence URLs containing that exact `order_id`, canonical item IDs, validity windows, publisher metadata, and expected SHA-256 body hashes. During a dispute, the contract leader fetches a registered page through `gl.nondet.web.get`, verifies the order binding, HTTP metadata, and byte identity, extracts a bounded JSON attestation, and evaluates only canonical attestation facts through `gl.nondet.exec_prompt`. Raw HTML and the buyer reason do not enter the adjudication prompt. Validators independently repeat both operations.
 
-A verdict is accepted only when schema and internal-consistency guards pass and validators agree on the stable consequential fields: `reason_code`, `refund_tier`, `evidence_sufficient`, and the SHA-256 hashes of the exact fetched bytes. Free-form summaries are not compared byte-for-byte. This source-grounded consensus and its direct on-chain payout cannot be replaced by traditional Solidity or one centralized AI response without reintroducing a trusted operator.
+A verdict is accepted only when provenance, body-hash, schema, and internal-consistency guards pass and validators agree on stable consequential fields: `reason_code`, `refund_tier`, `evidence_sufficient`, evidence hashes, and attestation hashes. Free-form summaries are not compared byte-for-byte. This source-grounded consensus and its direct on-chain payout cannot be replaced by traditional Solidity or one centralized AI response without reintroducing a trusted operator.
 
 ## How it works
 
@@ -40,7 +40,7 @@ A verdict is accepted only when schema and internal-consistency guards pass and 
 ### Buyer
 
 1. Load the known order ID and inspect its seller, listing snapshot, escrow, and deadline.
-2. Confirm a correct delivery to release the full escrow to the seller, or submit a reason and one or two public evidence URLs through `open_dispute`.
+2. Confirm a correct delivery to release the full escrow to the seller, or submit a reason and one or two registered evidence fixture URLs through `open_dispute`.
 3. If evaluation is undetermined, retry once with new evidence.
 
 ### Either named party
@@ -54,7 +54,7 @@ After the deadline, the buyer or seller can call `recover_expired_order` for an 
 | Intelligent Contract | Authoritative orders, participants, deadlines, evidence commitments, verdicts, payouts, terminal states, and Root Slot upgrade authorization |
 | GenLayer consensus | Independent web retrieval and semantic reevaluation before consequential verdict fields are accepted |
 | React + Vite frontend | Wallet connection, Studionet switching, write submission, returned-ID decoding, receipt verification, explicit state readback, and user-facing recovery errors |
-| Public fixture pages | Bounded demo listings and evidence; never authoritative application state |
+| Registered fixture pages | Bounded demo attestations whose exact URLs and body hashes are frozen into each order policy; never authoritative application state |
 
 There is no backend database or off-chain verdict service. Contract reads are the application source of truth.
 
@@ -62,7 +62,7 @@ There is no backend database or off-chain verdict service. Contract reads are th
 
 Order states are `OPEN`, `DISPUTE_PENDING`, `UNDETERMINED`, transient `RESOLVED`, and terminal `PAID_OUT`. Deterministic participant, amount, listing, deadline, retry, duplicate-action, and URL checks run before nondeterministic evaluation.
 
-Each dispute submission stores a canonical SHA-256 commitment over its order ID, submission number, reason, URLs, and fetched content hashes. Both allowed submission commitments are retained. A later URL change therefore cannot rewrite the bytes that were bound to the on-chain decision, although the contract does not preserve the source page itself.
+Each order first stores a SHA-256 policy commitment over its canonical item, allowed URLs, validity windows, publisher, and expected body hashes. Each dispute submission then stores a separate canonical commitment over its order ID, submission number, reason, URLs, observation time, policy hash, fetched byte hashes, attestation hashes, and result code. Both allowed submission commitments are retained. Mutated source bytes fail closed as `UNDETERMINED` and cannot trigger payout.
 
 | Method | Kind | Return | Behavior |
 | --- | --- | --- | --- |
@@ -130,8 +130,8 @@ npm run build
 
 Current local results:
 
-- 33 contract tests passed.
-- 35 frontend tests passed, including a concurrent-creation regression where the returned ID differs from `count - 1`.
+- 47 contract tests passed.
+- 36 frontend tests passed, including a concurrent-creation regression where the returned ID differs from `count - 1` and UI rejection of evidence outside the frozen order policy.
 - GenVM lint and validation passed.
 - Oxlint, TypeScript compilation, and the Vite production build passed.
 - The production build reports a non-blocking large-chunk warning.
@@ -149,8 +149,9 @@ The contract is classified as upgradable through GenLayer Root Slot. Any upgrade
 ## Security and trust boundaries
 
 - Listing creation is limited to a deterministic fixture registry; the listing URL itself is not fetched.
-- Evidence HTML is untrusted data. The prompt instructs evaluators to ignore embedded commands, and injection fixtures exercise that boundary.
-- Exact evidence-byte hashes are consensus-bound, but public URL ownership, publisher identity, long-term availability, and real-world custody are not authenticated.
+- Evidence is limited to exact HTTPS fixture URLs and expected body hashes frozen into each order. HTTP failures, unsupported content types, oversized or invalid UTF-8 bodies, stale or wrong-item attestations, conflicting sources, and changed bytes fail closed without payout.
+- Raw HTML and buyer-authored reasons are excluded from the LLM prompt. Only bounded facts from a validated JSON attestation are canonicalized for evaluation; instruction-like fixture content is rejected before the LLM call.
+- The demo publisher is identified by contract policy but is not backed by an external certificate authority or marketplace signature. Long-term URL availability and real-world custody remain outside the prototype trust boundary.
 - Only the buyer may dispute or confirm; only the buyer or seller may trigger expired recovery; only the registered upgrader may replace code.
 - Studionet GEN is simulated test-network value. This prototype has not received a production security audit.
 
@@ -158,7 +159,7 @@ The contract is classified as upgradable through GenLayer Root Slot. Any upgrade
 
 - The fixture registry and three payout tiers are intentionally narrow and do not support arbitrary marketplace listings.
 - There is no mutual cancellation path.
-- Evidence bytes are committed but not stored in content-addressed storage and may later disappear from their original URLs.
+- Evidence bytes are hash-pinned but not stored in content-addressed storage and may later disappear from their original URLs.
 - Live remediation evidence and a replacement contract address do not exist until the gated redeployment is completed.
 - Only the older V1 has a supervised live 100% material-mismatch settlement; 0% and 50% remain local-test-only paths.
 - The frontend currently depends on an injected EIP-1193 wallet and browser polling.

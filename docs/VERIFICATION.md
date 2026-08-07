@@ -6,10 +6,10 @@
 | --- | --- |
 | Project | GenDispute |
 | Submission category | Project |
-| Contract source-origin commit | `e2147fde7975e37cd8620a6c60f4a60e917e077d` |
-| Pre-deploy evidence baseline commit | `6ab106be3d9438f83e48f1cd273ff30c954f62af` |
+| Prior anonymous-reviewed commit | `d30ea42c01b922889642da93fa209ff887ee5161` (`CHANGES REQUIRED`) |
+| Prior reviewed contract SHA-256 | `d240e8da50f1e8f1d1660deb8881ff585211ec22ed214909cdca0dcfbceadb0c` |
 | Exact reviewed revision | Supplied by `git rev-parse HEAD` in each checkpoint package; it is not self-embedded because editing this file changes the commit hash. |
-| Contract source SHA-256 | `d240e8da50f1e8f1d1660deb8881ff585211ec22ed214909cdca0dcfbceadb0c` |
+| Contract source SHA-256 | `78d7d013ddc747a9776468ee01194744d2d86363e0c18f8dd4a58c2ae8604515` |
 | Network | GenLayer Studionet, chain ID `61999` |
 | Deployment classification | Upgradable through GenLayer Root Slot |
 | Selected deployer/upgrader | `0xbf90af1bc61314775d57b641b89c1f702a93b40d` |
@@ -23,9 +23,16 @@ The release candidate is locally verified but not yet deployed. The submitted V1
 | --- | --- |
 | Consume the ID returned by `create_order` | `useGenDispute.ts` reads `debugTraceTransaction({ round: 0 })`, decodes `return_data` through `abi.calldata.decode`, and loads that exact order. |
 | Cover concurrent order creation | The frontend regression sets the global count to `12` while `create_order` returns ID `7`, then proves the UI loads order `7`. The count is display-only. |
-| Bind evidence to each order | Leader and validators independently SHA-256 hash fetched evidence bytes. Stable consensus includes those hashes, and the contract stores a canonical commitment for each allowed submission. |
+| Bind immutable evidence to each order | `create_order` freezes an exact policy containing `order_id`-specific HTTPS URLs, canonical item ID, source validity windows, publisher ID, and expected body SHA-256 values. Leader and validators independently enforce that policy, and each attempt stores observation time, exact byte and attestation hashes, plus a canonical submission commitment. |
 | Add normal release | The named buyer can call `confirm_delivery`; the contract records `BUYER_CONFIRMED` and releases the full escrow to the seller. |
 | Add locked-fund recovery | Every order has a bounded deadline. After expiry, the buyer or seller can call `recover_expired_order` for `OPEN` or `UNDETERMINED` state; the seller-funded escrow returns to the seller. |
+
+## Anonymous PRE_DEPLOY blocker closure
+
+| Prior blocker | Corrected design | Regression evidence |
+| --- | --- | --- |
+| Evidence was not authenticated or order-specific | Arbitrary and wrong-order URLs are rejected. Every order freezes an order-ID-bound source policy before a dispute. Attestations must match the registered publisher, canonical item, evidence set, and validity window; unknown publisher, wrong item, stale, duplicate, and conflicting sources fail closed as `UNDETERMINED` with zero payout. The demo publisher is policy-registered and byte-hash-pinned, but not represented as an externally certified real-world identity. | Contract tests cover wrong order, unknown source/publisher, wrong item, stale source, conflicting source sets, mutated bytes, valid immutable evidence, and all three payout tiers. |
+| Untrusted web and prompt inputs lacked deterministic safeguards | Reason and URL lengths are bounded. HTTP status, content type, body size, UTF-8, attestation shape, facts, and exact body hash are checked before evaluation. Raw HTML, seller description, and buyer reason are excluded from the LLM prompt; only canonical JSON containing the frozen listing and validated attestation facts enters `exec_prompt`. | Contract tests cover 4xx/5xx, unsupported content, oversized bodies, invalid UTF-8, missing attestation, hostile instruction pages, hostile buyer reason, and validators agreeing with an injected unsupported verdict. All fail closed without transfer. |
 
 ## Local verification
 
@@ -44,9 +51,9 @@ git diff --check
 
 Results:
 
-- Contract: `33 passed`.
+- Contract: `47 passed`.
 - GenVM: lint passed, validation passed, 8 public methods detected.
-- Frontend: `35 passed` across 4 test files.
+- Frontend: `36 passed` across 4 test files.
 - Oxlint: zero errors.
 - TypeScript and Vite production build: passed.
 - Repository gate audit: `PASS`.
@@ -59,8 +66,9 @@ Contract tests use an isolated WSL environment with `genlayer-test==0.29.2`. Web
 
 - positive escrow, buyer/seller separation, registered listing, and snapshot validation;
 - independent leader and validator evidence retrieval and semantic evaluation;
-- exact evidence-byte hash agreement and canonical submission commitments;
-- malformed, contradictory, insufficient, changed, and injection-style evidence paths;
+- frozen order/item/source/time/body-hash policy plus exact evidence-byte and attestation-hash agreement;
+- wrong-order, unknown-publisher, wrong-item, stale, conflicting, malformed, changed, and injection-style evidence paths;
+- HTTP error, unsupported content type, oversized body, invalid UTF-8, missing attestation, and hostile reason paths;
 - 0%, 50%, and 100% conservation and transfer targets;
 - buyer-only dispute and confirmation authorization;
 - deadline bounds, no early recovery, named-party recovery, and no duplicate terminal action;
@@ -74,7 +82,7 @@ Contract tests use an isolated WSL environment with `genlayer-test==0.29.2`. Web
 - exact `create_order` return decoding under a simulated concurrent count race;
 - accepted, finalized, majority-disagree, undetermined, execution-error, and finalization-timeout handling;
 - normal buyer release and expired recovery writes;
-- listing-aware evidence presets and reviewer-facing `/docs` content.
+- listing- and order-aware immutable evidence presets, arbitrary-source rejection, and reviewer-facing `/docs` content.
 
 ## Deployment and recovery gate
 
@@ -88,8 +96,8 @@ The user selected and confirmed the external deployment wallet `0xbf90af1bc61314
 | Chain ID | `61999` |
 | RPC | `https://studio.genlayer.com/api` |
 | Contract source | `contracts/gen_dispute.py` |
-| Source-origin commit | `e2147fde7975e37cd8620a6c60f4a60e917e077d` |
-| Source SHA-256 | `d240e8da50f1e8f1d1660deb8881ff585211ec22ed214909cdca0dcfbceadb0c` |
+| Exact source revision | Supplied by `git rev-parse HEAD` in the approved deployment package |
+| Source SHA-256 | `78d7d013ddc747a9776468ee01194744d2d86363e0c18f8dd4a58c2ae8604515` |
 | Constructor arguments | None (`__init__(self)`) |
 | Deployment classification | `UPGRADABLE` |
 | Deployer/upgrader | `0xbf90af1bc61314775d57b641b89c1f702a93b40d` |

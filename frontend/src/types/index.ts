@@ -19,6 +19,9 @@ export interface OrderState {
   expiresAt: number;
   listingUrl: string;
   itemDescription: string;
+  itemId: string;
+  evidencePolicyHash: string;
+  evidenceObservedAt: number[];
   status: 'NONE' | 'OPEN' | 'DISPUTE_PENDING' | 'RESOLVED' | 'UNDETERMINED' | 'PAID_OUT';
   disputeAttempts: number;
   disputeReason: string;

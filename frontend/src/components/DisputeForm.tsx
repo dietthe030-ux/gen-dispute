@@ -1,11 +1,17 @@
 import React, { useState } from 'react'
-import { getEvidencePreset, type EvidencePresetType } from './evidencePresets'
+import {
+  EVIDENCE_ORIGIN,
+  getEvidencePreset,
+  isRegisteredEvidenceUrl,
+  type EvidencePresetType,
+} from './evidencePresets'
 
 interface DisputeFormProps {
   onSubmit: (reason: string, evidenceUrl1: string, evidenceUrl2: string) => void
   isLoading: boolean
   attempts: number
   listingUrl: string
+  orderId: number
 }
 
 export const DisputeForm: React.FC<DisputeFormProps> = ({
@@ -13,6 +19,7 @@ export const DisputeForm: React.FC<DisputeFormProps> = ({
   isLoading,
   attempts,
   listingUrl,
+  orderId,
 }) => {
   const [reason, setReason] = useState('')
   const [evidenceUrl1, setEvidenceUrl1] = useState('')
@@ -21,11 +28,10 @@ export const DisputeForm: React.FC<DisputeFormProps> = ({
   const [selectedPreset, setSelectedPreset] = useState('')
 
   const applyPreset = (presetType: EvidencePresetType) => {
-    const origin = window.location.origin
     const preset = getEvidencePreset(listingUrl, presetType)
     setSelectedPreset(presetType)
     setReason(preset.reason)
-    setEvidenceUrl1(`${origin}/fixtures/${preset.fixture}`)
+    setEvidenceUrl1(`${EVIDENCE_ORIGIN}${preset.fixture}?order_id=${orderId}`)
     setEvidenceUrl2('')
   }
 
@@ -37,12 +43,12 @@ export const DisputeForm: React.FC<DisputeFormProps> = ({
       setError('Reason must be at least 5 characters.')
       return
     }
-    if (!evidenceUrl1.startsWith('http://') && !evidenceUrl1.startsWith('https://')) {
-      setError('Evidence URL 1 must start with http:// or https://')
+    if (!isRegisteredEvidenceUrl(evidenceUrl1, orderId)) {
+      setError('Evidence URL 1 must be a registered immutable demo fixture.')
       return
     }
-    if (evidenceUrl2 && !evidenceUrl2.startsWith('http://') && !evidenceUrl2.startsWith('https://')) {
-      setError('Evidence URL 2 must start with http:// or https://')
+    if (evidenceUrl2 && !isRegisteredEvidenceUrl(evidenceUrl2, orderId)) {
+      setError('Evidence URL 2 must be a registered immutable demo fixture.')
       return
     }
 
@@ -61,7 +67,7 @@ export const DisputeForm: React.FC<DisputeFormProps> = ({
           <p className="card-lede">
             {isRetry
               ? 'One final evaluation with updated reason and evidence.'
-              : 'Claim the item does not match the listing. Evidence must be public URLs.'}
+              : 'Choose evidence from the immutable source policy frozen into this order.'}
           </p>
         </div>
       </div>
@@ -123,6 +129,7 @@ export const DisputeForm: React.FC<DisputeFormProps> = ({
             onChange={(e) => setReason(e.target.value)}
             disabled={isLoading}
             rows={3}
+            maxLength={500}
             required
           />
         </div>
@@ -141,6 +148,7 @@ export const DisputeForm: React.FC<DisputeFormProps> = ({
             disabled={isLoading}
             required
           />
+          <span className="form-help">Only byte-hash-pinned GenDispute demo fixtures are accepted.</span>
         </div>
 
         <div className="input-group">

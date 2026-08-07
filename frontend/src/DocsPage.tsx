@@ -32,7 +32,7 @@ export const DocsPage = () => {
     document.title = 'GenDispute Docs - Project and architecture'
     if (description) {
       description.content =
-        'Learn how GenDispute uses GenLayer Intelligent Contracts, validator consensus, public evidence, and deterministic payout tiers.'
+        'Learn how GenDispute uses GenLayer Intelligent Contracts, validator consensus, immutable demo evidence, and deterministic payout tiers.'
     }
 
     return () => {
@@ -58,7 +58,7 @@ export const DocsPage = () => {
             <h1 id="docs-title">Escrow that waits for evidence.</h1>
             <p>
               GenDispute holds GEN in independent order escrows and lets validators settle
-              item-not-as-described claims from public evidence.
+              item-not-as-described claims from byte-hash-pinned demo evidence.
             </p>
             <div className="docs-actions">
               <a className="btn btn-primary btn-lg" href="/">
@@ -166,10 +166,10 @@ export const DocsPage = () => {
               </p>
             </article>
             <article>
-              <h3>Submit public evidence</h3>
+              <h3>Submit registered evidence</h3>
               <p>
-                The buyer provides a reason and public URLs. Demo presets are matched to the
-                selected order so the reported delivery facts do not contradict its listing.
+                The buyer selects an HTTPS fixture whose URL contains the exact order ID and whose
+                canonical item, validity window, and expected body hash were frozen at creation.
               </p>
             </article>
             <article>
@@ -203,8 +203,8 @@ export const DocsPage = () => {
               <span>Consensus layer</span>
               <h3>GenLayer validators</h3>
               <p>
-                Independently fetch the same public evidence, rerun the evaluation, and compare
-                stable decision fields with the leader result.
+                Independently fetch the same registered bytes, verify their frozen hashes, rerun
+                the evaluation, and compare stable decision fields with the leader result.
               </p>
             </article>
             <article>
@@ -249,8 +249,18 @@ export const DocsPage = () => {
               <p>Only the order buyer can submit evidence or use the retry.</p>
             </article>
             <article>
+              <h3>Immutable evidence policy</h3>
+              <p>
+                Each order commits to order-specific source URLs, canonical item IDs, validity
+                windows, publisher metadata, and expected content hashes before a dispute exists.
+              </p>
+            </article>
+            <article>
               <h3>Injection-aware evaluation</h3>
-              <p>Instructions inside evidence pages are treated as untrusted content.</p>
+              <p>
+                Raw HTML and the buyer reason never enter the adjudication prompt. Only validated,
+                canonical attestation facts are evaluated.
+              </p>
             </article>
             <article>
               <h3>Independent validator check</h3>
@@ -262,8 +272,8 @@ export const DocsPage = () => {
             <article>
               <h3>Evidence commitment</h3>
               <p>
-                Each submission stores a canonical commitment to its URLs, claim, and exact
-                evidence bytes, so later URL changes do not rewrite what consensus evaluated.
+                Each submission stores a canonical commitment to its URLs, claim, observation
+                time, policy hash, attestation hashes, and exact evidence bytes.
               </p>
             </article>
             <article>

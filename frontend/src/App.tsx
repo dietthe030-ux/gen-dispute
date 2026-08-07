@@ -123,7 +123,7 @@ const App: React.FC = () => {
             <section className="card hero-card" aria-labelledby="welcome-heading">
               <h2 id="welcome-heading">Hold payment until the item checks out</h2>
               <p>
-                Seller deposits GEN into escrow. Buyer can dispute with public evidence.
+                Seller deposits GEN into escrow. Buyer can dispute with order-bound demo evidence.
                 Validators settle a 0%, 50%, or 100% refund.
               </p>
               <ol className="hero-steps">
@@ -180,6 +180,7 @@ const App: React.FC = () => {
                         isLoading={isSubmitting}
                         attempts={orderState.disputeAttempts}
                         listingUrl={orderState.listingUrl}
+                        orderId={orderState.orderId}
                       />
                     )}
 

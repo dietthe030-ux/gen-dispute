@@ -26,6 +26,7 @@ describe('DisputeForm evidence presets', () => {
         isLoading={false}
         attempts={0}
         listingUrl="https://listing.url/rolex_v2"
+        orderId={7}
       />
     )
 
@@ -35,8 +36,32 @@ describe('DisputeForm evidence presets', () => {
       'I received a Rolex Submariner instead of the Casio watch in the stored listing snapshot.'
     )
     expect(screen.getByLabelText('Evidence URL 1')).toHaveValue(
-      'http://localhost:3000/fixtures/fixture_evidence_rolex_instead_of_casio.html'
+      'https://gen-dispute.vercel.app/fixtures/fixture_evidence_rolex_instead_of_casio.html?order_id=7'
     )
     expect(screen.getByText('Test evidence for the Casio listing')).toBeInTheDocument()
+  })
+
+  it('rejects evidence outside the frozen source registry', () => {
+    const onSubmit = vi.fn()
+    render(
+      <DisputeForm
+        onSubmit={onSubmit}
+        isLoading={false}
+        attempts={0}
+        listingUrl="https://listing.url"
+        orderId={0}
+      />
+    )
+
+    fireEvent.change(screen.getByLabelText('Reason'), {
+      target: { value: 'The delivered item is different.' },
+    })
+    fireEvent.change(screen.getByLabelText('Evidence URL 1'), {
+      target: { value: 'https://buyer.example/evidence.html' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Submit dispute' }))
+
+    expect(onSubmit).not.toHaveBeenCalled()
+    expect(screen.getByRole('alert')).toHaveTextContent('registered immutable demo fixture')
   })
 })

@@ -215,6 +215,12 @@ const toOrderState = (order: any): OrderState => ({
   expiresAt: Number(order.expires_at),
   listingUrl: order.listing_url,
   itemDescription: order.item_description,
+  itemId: order.item_id || '',
+  evidencePolicyHash: order.evidence_policy_hash || '',
+  evidenceObservedAt: [
+    Number(order.evidence_observed_at_1 || 0),
+    Number(order.evidence_observed_at_2 || 0),
+  ].filter((value) => value > 0),
   status: order.status,
   disputeAttempts: Number(order.dispute_attempts),
   disputeReason: order.dispute_reason,

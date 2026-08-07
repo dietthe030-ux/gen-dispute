@@ -98,6 +98,16 @@ export const DisputeResult: React.FC<DisputeResultProps> = ({
                 <span className="detail-val code-font">{order.evidenceCommitments.join('\n')}</span>
               </div>
             )}
+            {order.evidenceObservedAt.length > 0 && (
+              <div className="detail-item">
+                <span className="detail-label">Observed at (UTC)</span>
+                <span className="detail-val">
+                  {order.evidenceObservedAt
+                    .map((timestamp) => new Date(timestamp * 1000).toISOString())
+                    .join('\n')}
+                </span>
+              </div>
+            )}
           </div>
         </div>
       ) : (

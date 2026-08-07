@@ -87,6 +87,9 @@ describe('App Component', () => {
         expiresAt: 1786752000,
         listingUrl: 'https://listing.url',
         itemDescription: 'Vintage Watch description',
+        itemId: 'WATCH_ROLEX_SUBMARINER',
+        evidencePolicyHash: 'a'.repeat(64),
+        evidenceObservedAt: [],
         status: 'OPEN',
         disputeAttempts: 0,
         disputeReason: '',
@@ -137,6 +140,9 @@ describe('App Component', () => {
         expiresAt: 2,
         listingUrl: 'https://listing.url',
         itemDescription: 'Vintage Watch description',
+        itemId: 'WATCH_ROLEX_SUBMARINER',
+        evidencePolicyHash: 'a'.repeat(64),
+        evidenceObservedAt: [],
         status: 'OPEN',
         disputeAttempts: 0,
         disputeReason: '',
@@ -265,7 +271,11 @@ describe('App Component', () => {
     const evidenceInput = screen.getByLabelText('Evidence URL 1')
 
     fireEvent.change(reasonInput, { target: { value: 'New discrepancy description' } })
-    fireEvent.change(evidenceInput, { target: { value: 'https://new-evidence.url' } })
+    fireEvent.change(evidenceInput, {
+      target: {
+        value: 'https://gen-dispute.vercel.app/fixtures/fixture_evidence_partial.html?order_id=0',
+      },
+    })
 
     const submitBtn = screen.getByRole('button', { name: 'Submit retry' })
     fireEvent.click(submitBtn)
@@ -274,7 +284,7 @@ describe('App Component', () => {
     expect(mockSetIsRetrying).toHaveBeenCalledWith(false)
     expect(mockOpenDispute).toHaveBeenCalledWith(
       'New discrepancy description',
-      'https://new-evidence.url',
+      'https://gen-dispute.vercel.app/fixtures/fixture_evidence_partial.html?order_id=0',
       ''
     )
   })
