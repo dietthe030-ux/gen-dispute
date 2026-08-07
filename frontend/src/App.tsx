@@ -8,6 +8,7 @@ import { DisputeResult } from './components/DisputeResult'
 import { TransactionProgress } from './components/TransactionProgress'
 import { SiteHeader } from './components/SiteHeader'
 import { OrderLookup } from './components/OrderLookup'
+import { SettlementActions } from './components/SettlementActions'
 
 const App: React.FC = () => {
   const {
@@ -23,6 +24,8 @@ const App: React.FC = () => {
     disconnectWallet,
     createOrder,
     openDispute,
+    confirmDelivery,
+    recoverExpiredOrder,
     loadOrder,
     clearSelectedOrder,
     isRetrying,
@@ -34,9 +37,10 @@ const App: React.FC = () => {
     listingUrl: string,
     listingSnapshot: string,
     description: string,
-    amount: string
+    amount: string,
+    timeoutSeconds: number
   ) => {
-    await createOrder(buyer, listingUrl, listingSnapshot, description, amount)
+    await createOrder(buyer, listingUrl, listingSnapshot, description, amount, timeoutSeconds)
   }
 
   const handleDisputeSubmit = async (reason: string, url1: string, url2: string) => {
@@ -95,9 +99,9 @@ const App: React.FC = () => {
               )}
               <p className="role-desc">
                 {isBuyer
-                  ? 'You can open a dispute while the order is open.'
+                  ? 'You can confirm delivery or open a dispute while the order is open.'
                   : isSeller
-                    ? 'You created this order. Escrow stays locked until settlement.'
+                    ? 'You created this order. After the deadline, you can recover unresolved escrow.'
                     : 'This wallet is not a party to this order.'}
               </p>
             </div>
@@ -155,6 +159,15 @@ const App: React.FC = () => {
               ) : (
                 <>
                   <OrderStatus order={orderState} />
+
+                  <SettlementActions
+                    order={orderState}
+                    isBuyer={isBuyer}
+                    isSeller={isSeller}
+                    isLoading={isSubmitting}
+                    onConfirmDelivery={confirmDelivery}
+                    onRecoverExpired={recoverExpiredOrder}
+                  />
 
                   {isBuyer &&
                     (orderState.status === 'OPEN' ||

@@ -15,6 +15,7 @@ vi.mock('../config/genlayer', () => {
       writeContract: vi.fn(),
       readContract: vi.fn(),
       waitForTransactionReceipt: vi.fn(),
+      debugTraceTransaction: vi.fn(),
     },
   }
 })
@@ -43,11 +44,15 @@ const contractOrder = (status: 'OPEN' | 'PAID_OUT' | 'UNDETERMINED' = 'OPEN') =>
   seller: '0xseller',
   buyer: '0xbuyer',
   escrow_amount: 1000n,
+  created_at: 1786147200,
+  expires_at: 1786752000,
   listing_url: 'https://listing.url',
   item_description: 'descr',
   dispute_attempts: status === 'OPEN' ? 0 : 1,
   dispute_reason: status === 'OPEN' ? '' : 'broken',
   evidence_urls: [],
+  evidence_hashes: [],
+  evidence_commitments: [],
   refund_tier: status === 'PAID_OUT' ? 50 : null,
   buyer_payout: status === 'PAID_OUT' ? 500n : null,
   seller_payout: status === 'PAID_OUT' ? 500n : null,
@@ -63,6 +68,7 @@ const contractOrder = (status: 'OPEN' | 'PAID_OUT' | 'UNDETERMINED' = 'OPEN') =>
 describe('useGenDispute Hook', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.mocked(client.debugTraceTransaction).mockResolvedValue({ return_data: '0x01' } as any)
     ;(window as any).ethereum = {
       request: vi.fn(),
       on: vi.fn(),
@@ -246,6 +252,7 @@ describe('useGenDispute Hook', () => {
           'https://listing.url/rolex_v1',
           'Version A: Rolex watch including original box and papers',
           'description',
+          604800,
         ],
         value: 1500000000000000000n,
         account: { address: '0x1122334455667788990011223344556677889900', type: 'json-rpc' },
@@ -266,6 +273,40 @@ describe('useGenDispute Hook', () => {
       })
 
       expect(result.current.uiState).toBe('FINALIZED')
+    })
+
+    it('uses the returned order ID when concurrent creation changes the global count', async () => {
+      vi.mocked(client.writeContract).mockResolvedValue('0xconcurrent')
+      vi.mocked(client.waitForTransactionReceipt).mockResolvedValue(successfulReceipt() as any)
+      vi.mocked(client.debugTraceTransaction).mockResolvedValue({ return_data: '0x39' } as any)
+      vi.mocked(client.readContract).mockImplementation(async ({ functionName, args }: any) => {
+        if (functionName === 'get_order_count') return 12
+        return { ...contractOrder(), order_id: args[0] }
+      })
+      ;(window as any).ethereum.request.mockImplementation(async ({ method }: any) => {
+        if (method === 'eth_chainId') return '0xf22f'
+        if (method === 'eth_requestAccounts') return ['0x1122334455667788990011223344556677889900']
+        return null
+      })
+
+      const { result } = renderHook(() => useGenDispute())
+      await act(async () => result.current.connectWallet())
+      await act(async () => result.current.createOrder(
+        '0xbuyer',
+        'https://listing.url',
+        'Vintage Rolex Submariner watch in excellent condition',
+        'description',
+        '1',
+      ))
+
+      expect(result.current.orderCount).toBe(12)
+      expect(result.current.selectedOrderId).toBe(7)
+      expect(result.current.orderState?.orderId).toBe(7)
+      expect(client.readContract).toHaveBeenCalledWith({
+        address: '0xcontractaddress',
+        functionName: 'get_order',
+        args: [7],
+      })
     })
 
     it('treats finalized execution error as a failure', async () => {
@@ -598,6 +639,44 @@ describe('useGenDispute Hook', () => {
 
       expect(result.current.uiState).toBe('ERROR')
       expect(result.current.errorMessage).toBe('User rejected signing')
+    })
+  })
+
+  describe('settlement handlers', () => {
+    beforeEach(() => {
+      ;(window as any).ethereum.request.mockImplementation(async ({ method }: any) => {
+        if (method === 'eth_chainId') return '0xf22f'
+        if (method === 'eth_requestAccounts') return ['0x1122334455667788990011223344556677889900']
+        return null
+      })
+      vi.mocked(client.writeContract).mockResolvedValue('0xsettlement')
+      vi.mocked(client.waitForTransactionReceipt).mockResolvedValue(successfulReceipt() as any)
+      vi.mocked(client.readContract).mockImplementation(async ({ functionName }: any) =>
+        functionName === 'get_order_count' ? 1 : contractOrder('PAID_OUT')
+      )
+    })
+
+    it.each([
+      ['confirm_delivery', 'confirmDelivery'],
+      ['recover_expired_order', 'recoverExpiredOrder'],
+    ] as const)('submits %s and refreshes the paid-out order', async (functionName, handlerName) => {
+      const { result } = renderHook(() => useGenDispute())
+      await act(async () => result.current.connectWallet())
+      await act(async () => result.current.loadOrder(0))
+      await act(async () => result.current[handlerName]())
+
+      expect(client.writeContract).toHaveBeenCalledWith({
+        address: '0xcontractaddress',
+        functionName,
+        args: [0],
+        value: 0n,
+        account: {
+          address: '0x1122334455667788990011223344556677889900',
+          type: 'json-rpc',
+        },
+      })
+      expect(result.current.uiState).toBe('PAID_OUT')
+      expect(result.current.orderState?.status).toBe('PAID_OUT')
     })
   })
 })

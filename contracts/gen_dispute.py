@@ -2,6 +2,9 @@
 from genlayer import *
 from genlayer.gl import evm
 from dataclasses import dataclass
+from datetime import datetime, timezone
+import hashlib
+import json
 
 @evm.contract_interface
 class EVMRecipient:
@@ -17,6 +20,9 @@ FIXTURE_REGISTRY = {
     "https://listing.url/vintage_watch": "Vintage Rolex Submariner watch in excellent condition",
 }
 
+MIN_TIMEOUT_SECONDS = 60
+MAX_TIMEOUT_SECONDS = 30 * 24 * 60 * 60
+
 @allow_storage
 @dataclass
 class Order:
@@ -24,6 +30,8 @@ class Order:
     seller: Address
     buyer: Address
     escrow_amount: u256
+    created_at: u256
+    expires_at: u256
     listing_url: str
     listing_snapshot: str
     item_description: str
@@ -32,6 +40,10 @@ class Order:
     dispute_reason: str
     evidence_url_1: str
     evidence_url_2: str
+    evidence_sha256_1: str
+    evidence_sha256_2: str
+    evidence_commitment_1: str
+    evidence_commitment_2: str
     refund_tier: u256
     buyer_payout: u256
     seller_payout: u256
@@ -40,9 +52,15 @@ class Order:
 
 class GenDispute(gl.Contract):
     orders: DynArray[Order]
+    upgrader: Address
 
     def __init__(self):
-        pass
+        self.upgrader = gl.message.sender_address
+        root = gl.storage.Root.get()
+        root.upgraders.get().append(self.upgrader)
+
+    def _now(self) -> int:
+        return int(datetime.now(timezone.utc).timestamp())
 
     def _get_order(self, order_id: u256) -> Order:
         order_index = int(order_id)
@@ -51,8 +69,16 @@ class GenDispute(gl.Contract):
         return self.orders[order_index]
 
     @gl.public.write.payable
-    def create_order(self, buyer: Address, listing_url: str, listing_snapshot: str, item_description: str) -> u256:
+    def create_order(
+        self,
+        buyer: Address,
+        listing_url: str,
+        listing_snapshot: str,
+        item_description: str,
+        timeout_seconds: u256 = u256(7 * 24 * 60 * 60),
+    ) -> u256:
         buyer_addr = buyer if isinstance(buyer, Address) else Address(buyer)
+        timeout_value = int(timeout_seconds)
         
         if gl.message.value <= 0:
             raise gl.vm.UserError("Escrow amount must be positive")
@@ -64,6 +90,10 @@ class GenDispute(gl.Contract):
             raise gl.vm.UserError("Listing URL is not registered in the fixture database")
         if listing_snapshot != FIXTURE_REGISTRY[listing_url]:
             raise gl.vm.UserError("Listing snapshot does not match the registered content for this URL")
+        if timeout_value < MIN_TIMEOUT_SECONDS or timeout_value > MAX_TIMEOUT_SECONDS:
+            raise gl.vm.UserError("Timeout must be between 60 and 2592000 seconds")
+
+        created_at = self._now()
         
         order_id = u256(len(self.orders))
         self.orders.append(
@@ -72,11 +102,17 @@ class GenDispute(gl.Contract):
                 gl.message.sender_address,
                 buyer_addr,
                 gl.message.value,
+                u256(created_at),
+                u256(created_at + timeout_value),
                 listing_url,
                 listing_snapshot,
                 item_description,
                 "OPEN",
                 u256(0),
+                "",
+                "",
+                "",
+                "",
                 "",
                 "",
                 "",
@@ -90,7 +126,13 @@ class GenDispute(gl.Contract):
         return order_id
 
     @gl.public.write
-    def open_dispute(self, order_id: u256, reason: str, evidence_url_1: str, evidence_url_2: str = "") -> None:
+    def open_dispute(
+        self,
+        order_id: u256,
+        reason: str,
+        evidence_url_1: str,
+        evidence_url_2: str = "",
+    ) -> None:
         order = self._get_order(order_id)
 
         if gl.message.sender_address != order.buyer:
@@ -99,6 +141,10 @@ class GenDispute(gl.Contract):
             raise gl.vm.UserError("Order cannot be disputed")
         if order.dispute_attempts >= 2:
             raise gl.vm.UserError("Max retry cap reached")
+        if self._now() >= int(order.expires_at):
+            raise gl.vm.UserError("Order dispute window has expired")
+        if reason.strip() == "":
+            raise gl.vm.UserError("Dispute reason is required")
         if evidence_url_1 == "":
             raise gl.vm.UserError("At least one evidence URL is required")
         if not (evidence_url_1.startswith("http://") or evidence_url_1.startswith("https://")):
@@ -106,7 +152,15 @@ class GenDispute(gl.Contract):
         if evidence_url_2 != "":
             if not (evidence_url_2.startswith("http://") or evidence_url_2.startswith("https://")):
                 raise gl.vm.UserError("Invalid URL scheme")
-            
+
+        submission_number = int(order.dispute_attempts) + 1
+        if submission_number == 1:
+            if order.evidence_commitment_1 != "":
+                raise gl.vm.UserError("Evidence submission already recorded")
+        else:
+            if order.evidence_commitment_2 != "":
+                raise gl.vm.UserError("Evidence submission already recorded")
+
         order.status = "DISPUTE_PENDING"
         order.dispute_reason = reason
         order.evidence_url_1 = evidence_url_1
@@ -115,9 +169,9 @@ class GenDispute(gl.Contract):
         # Capture variables for nondet closures
         listing_snapshot = order.listing_snapshot
         item_description = order.item_description
-        evidence_urls_list = [evidence_url_1]
+        evidence_sources = [evidence_url_1]
         if evidence_url_2 != "":
-            evidence_urls_list.append(evidence_url_2)
+            evidence_sources.append(evidence_url_2)
             
         def build_evaluation_prompt(evidence_str: str) -> str:
             return f"""
@@ -162,26 +216,31 @@ class GenDispute(gl.Contract):
                 }}
                 """
 
-        def undetermined_result(summary: str) -> dict:
+        def undetermined_result(summary: str, evidence_hashes=None) -> dict:
             return {
                 "evidence_sufficient": False,
                 "refund_tier": -1,
                 "reason_code": "UNDETERMINED",
                 "summary": summary,
+                "evidence_hashes": evidence_hashes if evidence_hashes is not None else [],
             }
 
         def leader_fn() -> dict:
             try:
                 evidence_pages_text = []
-                for url in evidence_urls_list:
+                evidence_hashes = []
+                for url in evidence_sources:
                     ev_resp = gl.nondet.web.get(url)
-                    ev_text = ev_resp.body.decode("utf-8") if ev_resp.body else ""
+                    ev_body = ev_resp.body if ev_resp.body else b""
+                    evidence_hashes.append(hashlib.sha256(ev_body).hexdigest())
+                    ev_text = ev_body.decode("utf-8")
                     evidence_pages_text.append(f"URL: {url}\nCONTENT: {ev_text}")
 
                 prompt = build_evaluation_prompt("\n\n".join(evidence_pages_text))
                 res = gl.nondet.exec_prompt(prompt, response_format="json")
                 if not isinstance(res, dict):
-                    return undetermined_result("Invalid LLM response format")
+                    return undetermined_result("Invalid LLM response format", evidence_hashes)
+                res["evidence_hashes"] = evidence_hashes
                 return res
             except Exception as e:
                 return undetermined_result(str(e))
@@ -192,11 +251,19 @@ class GenDispute(gl.Contract):
 
             reason_code = output.get("reason_code")
             if reason_code == "UNDETERMINED":
+                hashes = output.get("evidence_hashes")
                 return (
                     output.get("refund_tier") == -1
                     and output.get("evidence_sufficient") is False
                     and isinstance(output.get("summary"), str)
                     and len(output.get("summary")) > 0
+                    and isinstance(hashes, list)
+                    and all(
+                        isinstance(item, str)
+                        and len(item) == 64
+                        and all(c in "0123456789abcdef" for c in item)
+                        for item in hashes
+                    )
                 )
 
             try:
@@ -217,6 +284,17 @@ class GenDispute(gl.Contract):
                     for item in val:
                         if not isinstance(item, str) or len(item) == 0:
                             return False
+
+                evidence_hashes = output.get("evidence_hashes")
+                if not isinstance(evidence_hashes, list) or len(evidence_hashes) != len(evidence_sources):
+                    return False
+                for evidence_hash in evidence_hashes:
+                    if (
+                        not isinstance(evidence_hash, str)
+                        or len(evidence_hash) != 64
+                        or any(c not in "0123456789abcdef" for c in evidence_hash)
+                    ):
+                        return False
 
                 item_identity = output.get("item_identity")
                 condition = output.get("condition")
@@ -273,9 +351,12 @@ class GenDispute(gl.Contract):
             try:
                 # Every validator independently fetches and evaluates the same evidence.
                 evidence_pages_text = []
-                for url in evidence_urls_list:
+                evidence_hashes = []
+                for url in evidence_sources:
                     ev_resp = gl.nondet.web.get(url)
-                    ev_text = ev_resp.body.decode("utf-8") if ev_resp.body else ""
+                    ev_body = ev_resp.body if ev_resp.body else b""
+                    evidence_hashes.append(hashlib.sha256(ev_body).hexdigest())
+                    ev_text = ev_body.decode("utf-8")
                     evidence_pages_text.append(f"URL: {url}\nCONTENT: {ev_text}")
 
                 validator_prompt = build_evaluation_prompt("\n\n".join(evidence_pages_text))
@@ -284,7 +365,12 @@ class GenDispute(gl.Contract):
                     response_format="json",
                 )
                 if not isinstance(validator_output, dict):
-                    validator_output = undetermined_result("Invalid LLM response format")
+                    validator_output = undetermined_result(
+                        "Invalid LLM response format",
+                        evidence_hashes,
+                    )
+                else:
+                    validator_output["evidence_hashes"] = evidence_hashes
             except Exception as e:
                 validator_output = undetermined_result(str(e))
 
@@ -293,27 +379,55 @@ class GenDispute(gl.Contract):
 
             # Compare only stable semantic decisions. Free-form summaries and
             # extracted fact wording may legitimately vary between validators.
-            stable_fields = ["reason_code", "refund_tier", "evidence_sufficient"]
+            stable_fields = ["reason_code", "refund_tier", "evidence_sufficient", "evidence_hashes"]
             return all(
                 leader_output.get(field_name) == validator_output.get(field_name)
                 for field_name in stable_fields
             )
 
+        def store_evidence_binding(evidence_hashes) -> None:
+            hashes = evidence_hashes if isinstance(evidence_hashes, list) else []
+            evidence_sha256_1 = hashes[0] if len(hashes) > 0 else ""
+            evidence_sha256_2 = hashes[1] if len(hashes) > 1 else ""
+            canonical_evidence = json.dumps(
+                {
+                    "evidence_sha256_1": evidence_sha256_1,
+                    "evidence_sha256_2": evidence_sha256_2,
+                    "evidence_url_1": evidence_url_1,
+                    "evidence_url_2": evidence_url_2,
+                    "order_id": int(order_id),
+                    "reason": reason,
+                    "submission_number": submission_number,
+                    "version": "GENDISPUTE_EVIDENCE_V1",
+                },
+                sort_keys=True,
+                separators=(",", ":"),
+                ensure_ascii=False,
+            )
+            evidence_commitment = hashlib.sha256(canonical_evidence.encode("utf-8")).hexdigest()
+            order.evidence_sha256_1 = evidence_sha256_1
+            order.evidence_sha256_2 = evidence_sha256_2
+            if submission_number == 1:
+                order.evidence_commitment_1 = evidence_commitment
+            else:
+                order.evidence_commitment_2 = evidence_commitment
+
         try:
             consensus_result = gl.vm.run_nondet_unsafe(leader_fn, validator_fn)
+            store_evidence_binding(consensus_result.get("evidence_hashes", []))
             tier = consensus_result.get("refund_tier", -1)
             reason_code = consensus_result.get("reason_code", "UNDETERMINED")
             
             # Explicitly validate consensus result
-            if tier not in [0, 50, 100] or reason_code not in ["MATCHES_DESCRIPTION", "PARTIAL_MISMATCH", "MATERIAL_MISMATCH"]:
-                order.status = "UNDETERMINED"
-                order.dispute_attempts += u256(1)
-                order.last_error = "Consensus output validation failed"
-                order.outcome = "UNDETERMINED"
-            elif reason_code == "UNDETERMINED" or tier == -1:
+            if reason_code == "UNDETERMINED" or tier == -1:
                 order.status = "UNDETERMINED"
                 order.dispute_attempts += u256(1)
                 order.last_error = consensus_result.get("summary", "Validation error or undetermined result")
+                order.outcome = "UNDETERMINED"
+            elif tier not in [0, 50, 100] or reason_code not in ["MATCHES_DESCRIPTION", "PARTIAL_MISMATCH", "MATERIAL_MISMATCH"]:
+                order.status = "UNDETERMINED"
+                order.dispute_attempts += u256(1)
+                order.last_error = "Consensus output validation failed"
                 order.outcome = "UNDETERMINED"
             else:
                 order.refund_tier = u256(tier)
@@ -321,10 +435,37 @@ class GenDispute(gl.Contract):
                 order.outcome = reason_code
                 self._execute_payout(order_id, tier)
         except Exception as e:
+            store_evidence_binding([])
             order.status = "UNDETERMINED"
             order.dispute_attempts += u256(1)
             order.last_error = str(e)
             order.outcome = "UNDETERMINED"
+
+    @gl.public.write
+    def confirm_delivery(self, order_id: u256) -> None:
+        order = self._get_order(order_id)
+        if gl.message.sender_address != order.buyer:
+            raise gl.vm.UserError("Only buyer can confirm delivery")
+        if order.status != "OPEN":
+            raise gl.vm.UserError("Order cannot be confirmed")
+
+        order.refund_tier = u256(0)
+        order.outcome = "BUYER_CONFIRMED"
+        self._execute_payout(order_id, 0)
+
+    @gl.public.write
+    def recover_expired_order(self, order_id: u256) -> None:
+        order = self._get_order(order_id)
+        if gl.message.sender_address not in [order.buyer, order.seller]:
+            raise gl.vm.UserError("Only buyer or seller can recover an expired order")
+        if self._now() < int(order.expires_at):
+            raise gl.vm.UserError("Order has not expired")
+        if order.status not in ["OPEN", "UNDETERMINED"]:
+            raise gl.vm.UserError("Order cannot be recovered")
+
+        order.refund_tier = u256(0)
+        order.outcome = "EXPIRED_RECOVERY"
+        self._execute_payout(order_id, 0)
 
     def _execute_payout(self, order_id: u256, tier: int) -> None:
         order = self._get_order(order_id)
@@ -334,6 +475,7 @@ class GenDispute(gl.Contract):
         
         order.buyer_payout = u256(buyer_share)
         order.seller_payout = u256(seller_share)
+        order.status = "PAID_OUT"
         
         # Payout to buyer
         if buyer_share > 0:
@@ -343,7 +485,26 @@ class GenDispute(gl.Contract):
         if seller_share > 0:
             EVMRecipient(order.seller).emit_transfer(value=u256(seller_share))
             
-        order.status = "PAID_OUT"
+
+    @gl.public.write
+    def upgrade(self, new_code: bytes) -> None:
+        root = gl.storage.Root.get()
+        is_authorized = False
+        for upgrader in root.upgraders.get():
+            if upgrader == gl.message.sender_address:
+                is_authorized = True
+                break
+        if not is_authorized:
+            raise gl.vm.UserError("Unauthorized address")
+        if len(new_code) == 0:
+            raise gl.vm.UserError("Upgrade code cannot be empty")
+        code = root.code.get()
+        code.truncate()
+        code.extend(new_code)
+
+    @gl.public.view
+    def get_upgrader(self) -> bytes:
+        return self.upgrader.as_bytes
 
     @gl.public.view
     def get_order_count(self) -> int:
@@ -357,12 +518,24 @@ class GenDispute(gl.Contract):
             evidence_list.append(order.evidence_url_1)
         if order.evidence_url_2 != "":
             evidence_list.append(order.evidence_url_2)
+        evidence_hashes = []
+        if order.evidence_sha256_1 != "":
+            evidence_hashes.append(order.evidence_sha256_1)
+        if order.evidence_sha256_2 != "":
+            evidence_hashes.append(order.evidence_sha256_2)
+        evidence_commitments = []
+        if order.evidence_commitment_1 != "":
+            evidence_commitments.append(order.evidence_commitment_1)
+        if order.evidence_commitment_2 != "":
+            evidence_commitments.append(order.evidence_commitment_2)
             
         return {
             "order_id": int(order.order_id),
             "seller": order.seller.as_bytes,
             "buyer": order.buyer.as_bytes,
             "escrow_amount": int(order.escrow_amount),
+            "created_at": int(order.created_at),
+            "expires_at": int(order.expires_at),
             "listing_url": order.listing_url,
             "listing_snapshot": order.listing_snapshot,
             "item_description": order.item_description,
@@ -370,6 +543,8 @@ class GenDispute(gl.Contract):
             "dispute_attempts": int(order.dispute_attempts),
             "dispute_reason": order.dispute_reason,
             "evidence_urls": evidence_list,
+            "evidence_hashes": evidence_hashes,
+            "evidence_commitments": evidence_commitments,
             "refund_tier": int(order.refund_tier),
             "buyer_payout": int(order.buyer_payout),
             "seller_payout": int(order.seller_payout),

@@ -65,6 +65,11 @@ export const OrderStatus: React.FC<OrderStatusProps> = ({ order }) => {
         </div>
 
         <div className="status-item">
+          <div className="status-label">Settlement deadline</div>
+          <div className="status-value">{new Date(order.expiresAt * 1000).toLocaleString()}</div>
+        </div>
+
+        <div className="status-item">
           <div className="status-label">Dispute attempts</div>
           <div className="status-value">{order.disputeAttempts} / 2</div>
         </div>

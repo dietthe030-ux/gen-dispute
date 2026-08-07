@@ -15,12 +15,16 @@ export interface OrderState {
   seller: string;
   buyer: string;
   escrowAmount: bigint;
+  createdAt: number;
+  expiresAt: number;
   listingUrl: string;
   itemDescription: string;
   status: 'NONE' | 'OPEN' | 'DISPUTE_PENDING' | 'RESOLVED' | 'UNDETERMINED' | 'PAID_OUT';
   disputeAttempts: number;
   disputeReason: string;
   evidenceUrls: string[];
+  evidenceHashes: string[];
+  evidenceCommitments: string[];
   refundTier: number | null;
   buyerPayout: bigint | null;
   sellerPayout: bigint | null;

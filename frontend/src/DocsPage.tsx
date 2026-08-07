@@ -155,8 +155,8 @@ export const DocsPage = () => {
             <article>
               <h3>Create escrow</h3>
               <p>
-                The seller names the buyer, locks the listing snapshot, deposits GEN, and
-                receives an order ID.
+                The seller names the buyer, chooses a deadline, locks the listing snapshot,
+                deposits GEN, and receives an order ID decoded directly from the transaction.
               </p>
             </article>
             <article>
@@ -174,7 +174,10 @@ export const DocsPage = () => {
             </article>
             <article>
               <h3>Settle the escrow</h3>
-              <p>Validators agree on a tier. The contract computes and emits the payout.</p>
+              <p>
+                Validators may agree on a dispute tier. The buyer can also confirm delivery,
+                while either party can release an unresolved order after its deadline.
+              </p>
             </article>
           </div>
         </section>
@@ -252,8 +255,15 @@ export const DocsPage = () => {
             <article>
               <h3>Independent validator check</h3>
               <p>
-                Schema checks reject malformed output; validators also repeat the evidence task
-                before a verdict can trigger payout.
+                Validators repeat the evidence task and require matching SHA-256 content hashes
+                and stable decision fields before a verdict can trigger payout.
+              </p>
+            </article>
+            <article>
+              <h3>Evidence commitment</h3>
+              <p>
+                Each submission stores a canonical commitment to its URLs, claim, and exact
+                evidence bytes, so later URL changes do not rewrite what consensus evaluated.
               </p>
             </article>
             <article>
@@ -278,8 +288,8 @@ export const DocsPage = () => {
           </div>
           <div className="method-reference" aria-label="Contract methods">
             <div>
-              <code>create_order(...) -&gt; u256 order_id</code>
-              <span>Payable seller write; appends an isolated order</span>
+              <code>create_order(..., timeout_seconds) -&gt; u256</code>
+              <span>Payable seller write; returns the exact isolated order ID</span>
             </div>
             <div>
               <code>get_order_count() -&gt; int</code>
@@ -292,6 +302,22 @@ export const DocsPage = () => {
             <div>
               <code>open_dispute(order_id, ...) -&gt; None</code>
               <span>Buyer evidence write for one order</span>
+            </div>
+            <div>
+              <code>confirm_delivery(order_id) -&gt; None</code>
+              <span>Buyer releases full escrow to the seller</span>
+            </div>
+            <div>
+              <code>recover_expired_order(order_id) -&gt; None</code>
+              <span>Named participant releases an expired escrow to the seller</span>
+            </div>
+            <div>
+              <code>get_upgrader() -&gt; bytes</code>
+              <span>Returns the registered Root Slot upgrader</span>
+            </div>
+            <div>
+              <code>upgrade(new_code) -&gt; None</code>
+              <span>Authorized non-empty code replacement path</span>
             </div>
           </div>
         </section>

@@ -72,6 +72,7 @@ describe('App Component', () => {
   })
 
   it('renders order details and dispute form when connected as BUYER', () => {
+    const confirmDelivery = vi.fn()
     ;(useGenDispute as any).mockReturnValue({
       account: { address: '0x81b637d8fcd2c6dac59ee6963113a1170de795e4' },
       uiState: 'RETRY_AVAILABLE',
@@ -82,12 +83,16 @@ describe('App Component', () => {
         seller: '0x1234567890123456789012345678901234567890',
         buyer: '0x81b637d8fcd2c6dac59ee6963113a1170de795e4',
         escrowAmount: BigInt(1.5 * 1e18),
+        createdAt: 1786147200,
+        expiresAt: 1786752000,
         listingUrl: 'https://listing.url',
         itemDescription: 'Vintage Watch description',
         status: 'OPEN',
         disputeAttempts: 0,
         disputeReason: '',
         evidenceUrls: [],
+        evidenceHashes: [],
+        evidenceCommitments: [],
         refundTier: null,
         buyerPayout: null,
         sellerPayout: null,
@@ -99,6 +104,8 @@ describe('App Component', () => {
       disconnectWallet: vi.fn(),
       createOrder: vi.fn(),
       openDispute: vi.fn(),
+      confirmDelivery,
+      recoverExpiredOrder: vi.fn(),
       refreshOrder: vi.fn(),
       setUiState: vi.fn(),
       isRetrying: false,
@@ -110,9 +117,12 @@ describe('App Component', () => {
     expect(screen.getByText('Order #0')).toBeInTheDocument()
     expect(screen.getByText('Buyer')).toBeInTheDocument()
     expect(screen.getByText('Open dispute')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm delivery and pay seller' }))
+    expect(confirmDelivery).toHaveBeenCalledOnce()
   })
 
   it('renders order details and seller message when connected as SELLER', () => {
+    const recoverExpiredOrder = vi.fn()
     ;(useGenDispute as any).mockReturnValue({
       account: { address: '0x1234567890123456789012345678901234567890' },
       uiState: 'RETRY_AVAILABLE',
@@ -123,12 +133,16 @@ describe('App Component', () => {
         seller: '0x1234567890123456789012345678901234567890',
         buyer: '0x81b637d8fcd2c6dac59ee6963113a1170de795e4',
         escrowAmount: BigInt(1.5 * 1e18),
+        createdAt: 1,
+        expiresAt: 2,
         listingUrl: 'https://listing.url',
         itemDescription: 'Vintage Watch description',
         status: 'OPEN',
         disputeAttempts: 0,
         disputeReason: '',
         evidenceUrls: [],
+        evidenceHashes: [],
+        evidenceCommitments: [],
         refundTier: null,
         buyerPayout: null,
         sellerPayout: null,
@@ -140,6 +154,8 @@ describe('App Component', () => {
       disconnectWallet: vi.fn(),
       createOrder: vi.fn(),
       openDispute: vi.fn(),
+      confirmDelivery: vi.fn(),
+      recoverExpiredOrder,
       refreshOrder: vi.fn(),
       setUiState: vi.fn(),
       isRetrying: false,
@@ -152,6 +168,8 @@ describe('App Component', () => {
     expect(screen.getByText('Seller')).toBeInTheDocument()
     expect(screen.getByText('Waiting on buyer')).toBeInTheDocument()
     expect(screen.queryByText('Open dispute')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Recover expired escrow' }))
+    expect(recoverExpiredOrder).toHaveBeenCalledOnce()
   })
 
   it('handles retry dispute flow for UNDETERMINED orders', async () => {
@@ -299,7 +317,7 @@ describe('App Component', () => {
 
     expect(screen.getByText('Undetermined')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Prepare retry' })).not.toBeInTheDocument()
-    expect(screen.getByText('No retries left. Escrow stays locked.')).toBeInTheDocument()
+    expect(screen.getByText('No retries left. Deadline recovery remains available.')).toBeInTheDocument()
   })
 
   it('shows an accepted transaction awaiting finalization as information, not an error', () => {

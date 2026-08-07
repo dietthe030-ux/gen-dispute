@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
-import { parseEther, type Address } from 'viem'
+import { hexToBytes, parseEther, type Address, type Hex } from 'viem'
+import { abi } from 'genlayer-js'
 import { client, CONTRACT_ADDRESS } from '../config/genlayer'
 import type { UIState, OrderState } from '../types'
 import { TransactionStatus, ExecutionResult } from 'genlayer-js/types'
@@ -7,6 +8,7 @@ import { TransactionStatus, ExecutionResult } from 'genlayer-js/types'
 const RECEIPT_POLL_INTERVAL_MS = 3000
 const ACCEPTED_POLL_RETRIES = 60
 const FINALIZED_POLL_RETRIES = 60
+export const DEFAULT_TIMEOUT_SECONDS = 7 * 24 * 60 * 60
 
 export const FINALIZATION_PENDING_MESSAGE =
   'Transaction accepted on Studionet. Finalization is still pending; contract state will continue to refresh.'
@@ -161,6 +163,22 @@ const waitForAcceptedAndFinalized = async (
   }
 }
 
+export const decodeCreatedOrderId = async (
+  hash: Awaited<ReturnType<typeof client.writeContract>>
+): Promise<number> => {
+  const trace = await client.debugTraceTransaction({ hash, round: 0 })
+  if (!trace?.return_data || !String(trace.return_data).startsWith('0x')) {
+    throw new Error('create_order did not return a decodable order ID')
+  }
+
+  const decoded = abi.calldata.decode(hexToBytes(trace.return_data as Hex))
+  const orderId = typeof decoded === 'bigint' ? Number(decoded) : Number(decoded)
+  if (!Number.isSafeInteger(orderId) || orderId < 0) {
+    throw new Error('create_order returned an invalid order ID')
+  }
+  return orderId
+}
+
 export const FIXTURE_REGISTRY: Record<string, string> = {
   'https://listing.url': 'Vintage Rolex Submariner watch in excellent condition',
   'https://listing.url/rolex_v1': 'Version A: Rolex watch including original box and papers',
@@ -193,12 +211,16 @@ const toOrderState = (order: any): OrderState => ({
   seller: order.seller,
   buyer: order.buyer,
   escrowAmount: BigInt(order.escrow_amount),
+  createdAt: Number(order.created_at),
+  expiresAt: Number(order.expires_at),
   listingUrl: order.listing_url,
   itemDescription: order.item_description,
   status: order.status,
   disputeAttempts: Number(order.dispute_attempts),
   disputeReason: order.dispute_reason,
   evidenceUrls: order.evidence_urls || [],
+  evidenceHashes: order.evidence_hashes || [],
+  evidenceCommitments: order.evidence_commitments || [],
   refundTier: order.refund_tier !== null ? Number(order.refund_tier) : null,
   buyerPayout: order.buyer_payout !== null ? BigInt(order.buyer_payout) : null,
   sellerPayout: order.seller_payout !== null ? BigInt(order.seller_payout) : null,
@@ -434,7 +456,8 @@ export const useGenDispute = () => {
     listingUrl: string,
     listingSnapshot: string,
     description: string,
-    amountGen: string
+    amountGen: string,
+    timeoutSeconds: number = DEFAULT_TIMEOUT_SECONDS
   ) => {
     if (!account) {
       setUiState('ERROR')
@@ -467,7 +490,7 @@ export const useGenDispute = () => {
       const hash = await client.writeContract({
         address: CONTRACT_ADDRESS,
         functionName: 'create_order',
-        args: [buyerAddress, listingUrl, listingSnapshot, description],
+        args: [buyerAddress, listingUrl, listingSnapshot, description, timeoutSeconds],
         value: amountWei,
         account: { address: account.address, type: 'json-rpc' },
       })
@@ -477,12 +500,10 @@ export const useGenDispute = () => {
 
       const finalized = await waitForAcceptedAndFinalized(hash, async () => {
         setUiState('ACCEPTED')
-        const count = await refreshOrderCount()
-        if (count !== null && count > 0) {
-          const createdOrderId = count - 1
-          setSelectedOrderId(createdOrderId)
-          await refreshOrder(createdOrderId)
-        }
+        const createdOrderId = await decodeCreatedOrderId(hash)
+        setSelectedOrderId(createdOrderId)
+        await refreshOrder(createdOrderId)
+        await refreshOrderCount()
       })
 
       if (finalized) {
@@ -492,17 +513,66 @@ export const useGenDispute = () => {
         setErrorMessage(FINALIZATION_PENDING_MESSAGE)
         setUiState('ACCEPTED')
       }
-      const count = await refreshOrderCount()
-      if (count !== null && count > 0) {
-        const createdOrderId = count - 1
-        setSelectedOrderId(createdOrderId)
-        await refreshOrder(createdOrderId)
-      }
+      await refreshOrderCount()
     } catch (e: any) {
       setUiState('ERROR')
       setErrorMessage(e.message || 'Transaction failed')
     }
   }, [account, refreshOrder, refreshOrderCount])
+
+  const settleOrder = useCallback(async (
+    functionName: 'confirm_delivery' | 'recover_expired_order'
+  ) => {
+    if (!account || selectedOrderId === null || !CONTRACT_ADDRESS) {
+      setUiState('ERROR')
+      setErrorMessage('Connect a wallet and select an order first')
+      return
+    }
+
+    setUiState('SUBMITTING')
+    setErrorMessage('')
+    try {
+      await checkAndSwitchNetwork()
+      const hash = await client.writeContract({
+        address: CONTRACT_ADDRESS,
+        functionName,
+        args: [selectedOrderId],
+        account: { address: account.address, type: 'json-rpc' },
+        value: 0n,
+      })
+      setTxHash(hash)
+      setUiState('WAITING_FOR_CONSENSUS')
+
+      const finalized = await waitForAcceptedAndFinalized(hash, async () => {
+        setUiState('ACCEPTED')
+        await refreshOrder()
+      })
+      const settledOrder = await readOrder(selectedOrderId)
+      setOrderState(settledOrder)
+      if (finalized) {
+        if (settledOrder.status !== 'PAID_OUT') {
+          throw new Error('Settlement finalized but the order is not paid out')
+        }
+        setUiState('PAID_OUT')
+      } else {
+        setUiState('ACCEPTED')
+        setErrorMessage(FINALIZATION_PENDING_MESSAGE)
+      }
+    } catch (e: any) {
+      setUiState('ERROR')
+      setErrorMessage(e.message || 'Transaction failed')
+    }
+  }, [account, readOrder, refreshOrder, selectedOrderId])
+
+  const confirmDelivery = useCallback(
+    () => settleOrder('confirm_delivery'),
+    [settleOrder]
+  )
+
+  const recoverExpiredOrder = useCallback(
+    () => settleOrder('recover_expired_order'),
+    [settleOrder]
+  )
 
   const openDispute = useCallback(async (reason: string, evidenceUrl1: string, evidenceUrl2: string = '') => {
     if (!account) {
@@ -589,6 +659,8 @@ export const useGenDispute = () => {
     disconnectWallet,
     createOrder,
     openDispute,
+    confirmDelivery,
+    recoverExpiredOrder,
     loadOrder,
     clearSelectedOrder,
     refreshOrder,

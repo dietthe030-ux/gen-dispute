@@ -968,6 +968,27 @@ textarea {
   word-break: break-all;
 }
 
+.settlement-card {
+  border-color: var(--accent-border);
+}
+
+.settlement-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+  margin-bottom: var(--space-2);
+}
+
+.settlement-actions .btn {
+  flex: 1 1 240px;
+}
+
+.detail-val.code-font {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 /* ---------- Presets ---------- */
 
 .preset-container {

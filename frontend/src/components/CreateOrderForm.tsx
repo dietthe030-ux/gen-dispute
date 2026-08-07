@@ -7,7 +7,8 @@ interface CreateOrderFormProps {
     listingUrl: string,
     listingSnapshot: string,
     description: string,
-    amount: string
+    amount: string,
+    timeoutSeconds: number
   ) => void
   isLoading: boolean
 }
@@ -18,6 +19,7 @@ export const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSubmit, isLo
   const [description, setDescription] = useState('')
   const [listingSnapshot, setListingSnapshot] = useState('')
   const [amount, setAmount] = useState('1.5')
+  const [timeoutSeconds, setTimeoutSeconds] = useState('604800')
   const [error, setError] = useState('')
   const [selectedPreset, setSelectedPreset] = useState('')
 
@@ -66,8 +68,13 @@ export const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSubmit, isLo
       setError('Escrow amount must be a positive number.')
       return
     }
+    const timeout = Number(timeoutSeconds)
+    if (!Number.isInteger(timeout) || timeout < 60 || timeout > 2592000) {
+      setError('Settlement timeout must be between 60 and 2,592,000 seconds.')
+      return
+    }
 
-    onSubmit(buyer, listingUrl, listingSnapshot, description, amount)
+    onSubmit(buyer, listingUrl, listingSnapshot, description, amount, timeout)
   }
 
   return (
@@ -210,6 +217,26 @@ export const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSubmit, isLo
           />
           <div id="amount-help" className="input-help">
             Positive GEN amount deposited with create_order.
+          </div>
+        </div>
+
+        <div className="input-group">
+          <label htmlFor="settlement-timeout">Settlement timeout (seconds)</label>
+          <input
+            id="settlement-timeout"
+            name="timeoutSeconds"
+            type="number"
+            min="60"
+            max="2592000"
+            step="1"
+            value={timeoutSeconds}
+            onChange={(e) => setTimeoutSeconds(e.target.value)}
+            disabled={isLoading}
+            required
+            aria-describedby="timeout-help"
+          />
+          <div id="timeout-help" className="input-help">
+            Defaults to 7 days. After expiry, either party can release locked funds back to the seller.
           </div>
         </div>
 

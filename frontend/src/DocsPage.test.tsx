@@ -14,6 +14,10 @@ describe('DocsPage', () => {
     expect(screen.getByText('Contract reference')).toBeInTheDocument()
     expect(screen.getByText('get_order(order_id) -> dict')).toBeInTheDocument()
     expect(screen.getByText('Independent validator check')).toBeInTheDocument()
+    expect(screen.getByText('Evidence commitment')).toBeInTheDocument()
+    expect(screen.getByText('confirm_delivery(order_id) -> None')).toBeInTheDocument()
+    expect(screen.getByText('recover_expired_order(order_id) -> None')).toBeInTheDocument()
+    expect(screen.getByText('upgrade(new_code) -> None')).toBeInTheDocument()
   })
 
   it('links back to the app and marks Docs as the current page', () => {

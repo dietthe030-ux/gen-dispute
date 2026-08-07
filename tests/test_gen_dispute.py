@@ -1,5 +1,7 @@
 import pytest
 import json
+import hashlib
+from datetime import datetime, timezone
 from pathlib import Path
 
 def test_create_order_positive_escrow(direct_deploy, direct_vm, direct_alice, direct_bob):
@@ -830,6 +832,300 @@ def test_missing_evidence(direct_deploy, direct_vm, direct_alice, direct_bob):
     with direct_vm.expect_revert("At least one evidence URL is required"):
         with direct_vm.prank(direct_bob):
             contract.open_dispute(0, "reasons", "")
+
+
+def test_create_order_records_deadline_and_rejects_invalid_timeout(
+    direct_deploy, direct_vm, direct_alice, direct_bob
+):
+    direct_vm.warp("2026-08-08T00:00:00Z")
+    contract = direct_deploy("contracts/gen_dispute.py")
+
+    with direct_vm.prank(direct_alice):
+        direct_vm.value = 1000
+        order_id = contract.create_order(
+            direct_bob,
+            "https://listing.url",
+            "Vintage Rolex Submariner watch in excellent condition",
+            "Timed order",
+            120,
+        )
+
+    expected_created_at = int(datetime(2026, 8, 8, tzinfo=timezone.utc).timestamp())
+    order = contract.get_order(order_id)
+    assert order["created_at"] == expected_created_at
+    assert order["expires_at"] == expected_created_at + 120
+
+    for invalid_timeout in [59, 30 * 24 * 60 * 60 + 1]:
+        with direct_vm.expect_revert("Timeout must be between 60 and 2592000 seconds"):
+            with direct_vm.prank(direct_alice):
+                direct_vm.value = 1000
+                contract.create_order(
+                    direct_bob,
+                    "https://listing.url",
+                    "Vintage Rolex Submariner watch in excellent condition",
+                    "Invalid timeout",
+                    invalid_timeout,
+                )
+
+
+def test_evidence_bytes_are_hashed_and_committed_on_chain(
+    direct_deploy, direct_vm, direct_alice, direct_bob
+):
+    contract = direct_deploy("contracts/gen_dispute.py")
+    with direct_vm.prank(direct_alice):
+        direct_vm.value = 1000
+        contract.create_order(
+            direct_bob,
+            "https://listing.url",
+            "Vintage Rolex Submariner watch in excellent condition",
+            "Vintage Watch",
+        )
+
+    evidence_body = "The delivered Rolex matches the listing exactly."
+    direct_vm.mock_web("https://evidence.url", {"status": 200, "body": evidence_body})
+    direct_vm.mock_llm(r".*", json.dumps({
+        "item_identity": "MATCH",
+        "condition": "MATCH",
+        "included_items": "MATCH",
+        "evidence_sufficient": True,
+        "refund_tier": 0,
+        "reason_code": "MATCHES_DESCRIPTION",
+        "summary": "The item matches.",
+        "listing_facts": ["Rolex listed"],
+        "evidence_facts": ["Rolex received"],
+    }))
+    direct_vm._gl_call_hook = lambda _vm, request: {"ok": None} if "EthSend" in request else None
+
+    reason = "Confirm that the received watch matches"
+    with direct_vm.prank(direct_bob):
+        contract.open_dispute(0, reason, "https://evidence.url")
+    assert direct_vm.run_validator() is True
+
+    expected_evidence_hash = hashlib.sha256(evidence_body.encode("utf-8")).hexdigest()
+    expected_commitment = hashlib.sha256(json.dumps(
+        {
+            "evidence_sha256_1": expected_evidence_hash,
+            "evidence_sha256_2": "",
+            "evidence_url_1": "https://evidence.url",
+            "evidence_url_2": "",
+            "order_id": 0,
+            "reason": reason,
+            "submission_number": 1,
+            "version": "GENDISPUTE_EVIDENCE_V1",
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+    ).encode("utf-8")).hexdigest()
+
+    order = contract.get_order(0)
+    assert order["evidence_hashes"] == [expected_evidence_hash]
+    assert order["evidence_commitments"] == [expected_commitment]
+
+
+def test_validator_rejects_changed_evidence_bytes_even_when_verdict_matches(
+    direct_deploy, direct_vm, direct_alice, direct_bob
+):
+    contract = direct_deploy("contracts/gen_dispute.py")
+    with direct_vm.prank(direct_alice):
+        direct_vm.value = 1000
+        contract.create_order(
+            direct_bob,
+            "https://listing.url",
+            "Vintage Rolex Submariner watch in excellent condition",
+            "Vintage Watch",
+        )
+
+    verdict = json.dumps({
+        "item_identity": "MATCH",
+        "condition": "MATCH",
+        "included_items": "MATCH",
+        "evidence_sufficient": True,
+        "refund_tier": 0,
+        "reason_code": "MATCHES_DESCRIPTION",
+        "summary": "The item matches.",
+        "listing_facts": ["Rolex listed"],
+        "evidence_facts": ["Rolex received"],
+    })
+    direct_vm.mock_web("https://evidence.url", {"status": 200, "body": "leader bytes"})
+    direct_vm.mock_llm(r".*", verdict)
+    with direct_vm.prank(direct_bob):
+        contract.open_dispute(0, "Verify the item", "https://evidence.url")
+
+    direct_vm.clear_mocks()
+    direct_vm.mock_web("https://evidence.url", {"status": 200, "body": "changed validator bytes"})
+    direct_vm.mock_llm(r".*", verdict)
+    assert direct_vm.run_validator() is False
+
+
+def test_retry_preserves_each_evidence_commitment(
+    direct_deploy, direct_vm, direct_alice, direct_bob
+):
+    contract = direct_deploy("contracts/gen_dispute.py")
+    with direct_vm.prank(direct_alice):
+        direct_vm.value = 1000
+        contract.create_order(
+            direct_bob,
+            "https://listing.url",
+            "Vintage Rolex Submariner watch in excellent condition",
+            "Vintage Watch",
+        )
+
+    direct_vm.mock_web("https://evidence.url/one", {"status": 200, "body": "attempt one"})
+    direct_vm.mock_llm(r".*", "malformed JSON")
+    with direct_vm.prank(direct_bob):
+        contract.open_dispute(0, "First attempt", "https://evidence.url/one")
+    assert direct_vm.run_validator() is True
+    first_commitment = contract.get_order(0)["evidence_commitments"][0]
+
+    direct_vm.clear_mocks()
+    direct_vm.mock_web("https://evidence.url/two", {"status": 200, "body": "attempt two"})
+    direct_vm.mock_llm(r".*", "malformed JSON")
+    with direct_vm.prank(direct_bob):
+        contract.open_dispute(0, "Second attempt", "https://evidence.url/two")
+    assert direct_vm.run_validator() is True
+
+    commitments = contract.get_order(0)["evidence_commitments"]
+    assert len(commitments) == 2
+    assert commitments[0] == first_commitment
+    assert commitments[1] != first_commitment
+
+
+def test_buyer_can_confirm_delivery_and_release_full_escrow(
+    direct_deploy, direct_vm, direct_alice, direct_bob, direct_charlie
+):
+    contract = direct_deploy("contracts/gen_dispute.py")
+    with direct_vm.prank(direct_alice):
+        direct_vm.value = 1000
+        contract.create_order(
+            direct_bob,
+            "https://listing.url",
+            "Vintage Rolex Submariner watch in excellent condition",
+            "Vintage Watch",
+        )
+
+    with direct_vm.expect_revert("Only buyer can confirm delivery"):
+        with direct_vm.prank(direct_charlie):
+            contract.confirm_delivery(0)
+
+    eth_sends = []
+    def gl_call_hook(_vm, request):
+        if "EthSend" in request:
+            eth_sends.append(request["EthSend"])
+            return {"ok": None}
+        return None
+    direct_vm._gl_call_hook = gl_call_hook
+
+    with direct_vm.prank(direct_bob):
+        contract.confirm_delivery(0)
+
+    order = contract.get_order(0)
+    assert order["status"] == "PAID_OUT"
+    assert order["outcome"] == "BUYER_CONFIRMED"
+    assert order["buyer_payout"] == 0
+    assert order["seller_payout"] == 1000
+    assert len(eth_sends) == 1
+    assert direct_vm._to_bytes(eth_sends[0]["address"]) == direct_alice
+
+    with direct_vm.expect_revert("Order cannot be confirmed"):
+        with direct_vm.prank(direct_bob):
+            contract.confirm_delivery(0)
+
+
+def test_expired_order_recovery_is_permissioned_and_cannot_run_early(
+    direct_deploy, direct_vm, direct_alice, direct_bob, direct_charlie
+):
+    direct_vm.warp("2026-08-08T00:00:00Z")
+    contract = direct_deploy("contracts/gen_dispute.py")
+    with direct_vm.prank(direct_alice):
+        direct_vm.value = 1000
+        contract.create_order(
+            direct_bob,
+            "https://listing.url",
+            "Vintage Rolex Submariner watch in excellent condition",
+            "Timed order",
+            60,
+        )
+
+    with direct_vm.expect_revert("Only buyer or seller can recover an expired order"):
+        with direct_vm.prank(direct_charlie):
+            contract.recover_expired_order(0)
+    with direct_vm.expect_revert("Order has not expired"):
+        with direct_vm.prank(direct_alice):
+            contract.recover_expired_order(0)
+
+    direct_vm.warp("2026-08-08T00:01:00Z")
+    with direct_vm.expect_revert("Order dispute window has expired"):
+        with direct_vm.prank(direct_bob):
+            contract.open_dispute(0, "Too late", "https://evidence.url")
+
+    eth_sends = []
+    def gl_call_hook(_vm, request):
+        if "EthSend" in request:
+            eth_sends.append(request["EthSend"])
+            return {"ok": None}
+        return None
+    direct_vm._gl_call_hook = gl_call_hook
+
+    with direct_vm.prank(direct_bob):
+        contract.recover_expired_order(0)
+
+    order = contract.get_order(0)
+    assert order["status"] == "PAID_OUT"
+    assert order["outcome"] == "EXPIRED_RECOVERY"
+    assert order["seller_payout"] == 1000
+    assert len(eth_sends) == 1
+    assert direct_vm._to_bytes(eth_sends[0]["address"]) == direct_alice
+
+    with direct_vm.expect_revert("Order cannot be recovered"):
+        with direct_vm.prank(direct_alice):
+            contract.recover_expired_order(0)
+
+
+def test_expired_undetermined_order_can_be_recovered(
+    direct_deploy, direct_vm, direct_alice, direct_bob
+):
+    direct_vm.warp("2026-08-08T00:00:00Z")
+    contract = direct_deploy("contracts/gen_dispute.py")
+    with direct_vm.prank(direct_alice):
+        direct_vm.value = 1000
+        contract.create_order(
+            direct_bob,
+            "https://listing.url",
+            "Vintage Rolex Submariner watch in excellent condition",
+            "Timed order",
+            60,
+        )
+
+    direct_vm.mock_web("https://evidence.url", {"status": 200, "body": "unclear"})
+    direct_vm.mock_llm(r".*", "malformed JSON")
+    with direct_vm.prank(direct_bob):
+        contract.open_dispute(0, "Unclear evidence", "https://evidence.url")
+    assert direct_vm.run_validator() is True
+    assert contract.get_order(0)["status"] == "UNDETERMINED"
+
+    direct_vm.warp("2026-08-08T00:01:00Z")
+    direct_vm._gl_call_hook = lambda _vm, request: {"ok": None} if "EthSend" in request else None
+    with direct_vm.prank(direct_alice):
+        contract.recover_expired_order(0)
+    assert contract.get_order(0)["outcome"] == "EXPIRED_RECOVERY"
+
+
+def test_root_slot_upgrade_is_restricted_to_deployer(
+    direct_deploy, direct_vm, direct_bob
+):
+    contract = direct_deploy("contracts/gen_dispute.py")
+    deployer = direct_vm.sender
+    assert contract.get_upgrader() == deployer
+
+    with direct_vm.prank(direct_bob):
+        with direct_vm.expect_revert("Unauthorized address"):
+            contract.upgrade(b"malicious code")
+
+    with direct_vm.expect_revert("Upgrade code cannot be empty"):
+        contract.upgrade(b"")
+
+    contract.upgrade(b"replacement code")
 
 
 def test_public_evidence_fixtures_match_contract_listing():

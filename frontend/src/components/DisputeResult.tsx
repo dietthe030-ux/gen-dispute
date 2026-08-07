@@ -33,6 +33,13 @@ export const DisputeResult: React.FC<DisputeResultProps> = ({
           ? '100% refund'
           : `${order.refundTier}% refund`
 
+  const settlementLabel =
+    order.outcome === 'BUYER_CONFIRMED'
+      ? 'Delivery confirmed'
+      : order.outcome === 'EXPIRED_RECOVERY'
+        ? 'Expired escrow released'
+        : tierLabel
+
   return (
     <section className="card" aria-labelledby="verdict-title">
       <h2 id="verdict-title" className="card-title">
@@ -42,7 +49,7 @@ export const DisputeResult: React.FC<DisputeResultProps> = ({
       {isResolved ? (
         <div className="verdict-container">
           <div className="verdict-banner success" role="status">
-            <div className="verdict-tier">{tierLabel}</div>
+            <div className="verdict-tier">{settlementLabel}</div>
             <div className="verdict-code">{order.outcome}</div>
           </div>
 
@@ -79,6 +86,18 @@ export const DisputeResult: React.FC<DisputeResultProps> = ({
                 </span>
               </div>
             )}
+            {order.evidenceHashes.length > 0 && (
+              <div className="detail-item">
+                <span className="detail-label">Evidence SHA-256</span>
+                <span className="detail-val code-font">{order.evidenceHashes.join('\n')}</span>
+              </div>
+            )}
+            {order.evidenceCommitments.length > 0 && (
+              <div className="detail-item">
+                <span className="detail-label">Submission commitments</span>
+                <span className="detail-val code-font">{order.evidenceCommitments.join('\n')}</span>
+              </div>
+            )}
           </div>
         </div>
       ) : (
@@ -107,7 +126,7 @@ export const DisputeResult: React.FC<DisputeResultProps> = ({
             </div>
           ) : (
             <div className="retry-action">
-              <p className="text-muted">No retries left. Escrow stays locked.</p>
+              <p className="text-muted">No retries left. Deadline recovery remains available.</p>
             </div>
           )}
         </div>
