@@ -58,7 +58,7 @@ export const DocsPage = () => {
             <h1 id="docs-title">Escrow that waits for evidence.</h1>
             <p>
               GenDispute holds GEN in independent order escrows and lets validators settle
-              item-not-as-described claims from byte-hash-pinned demo evidence.
+              item-not-as-described claims from issuer-authenticated, order-specific receipts.
             </p>
             <div className="docs-actions">
               <a className="btn btn-primary btn-lg" href="/">
@@ -78,7 +78,7 @@ export const DocsPage = () => {
           <div
             className="architecture-map"
             role="img"
-            aria-label="Seller funds an intelligent contract. Buyer submits evidence. Validators reach consensus and the contract pays both parties."
+            aria-label="Seller funds an intelligent contract. An independent issuer registers order-bound evidence. The buyer requests evaluation. Validators reach consensus and the contract pays both parties."
           >
             <div className="architecture-map-head">
               <span>Settlement flow</span>
@@ -99,8 +99,8 @@ export const DocsPage = () => {
             </div>
             <div className="architecture-lane architecture-lane-reverse">
               <div className="architecture-node">
-                <span className="architecture-node-code">BUYER</span>
-                <strong>Submit evidence</strong>
+                <span className="architecture-node-code">ISSUER + BUYER</span>
+                <strong>Bind receipt; request review</strong>
               </div>
               <span className="architecture-arrow" aria-hidden="true">
                 →
@@ -166,10 +166,11 @@ export const DocsPage = () => {
               </p>
             </article>
             <article>
-              <h3>Submit registered evidence</h3>
+              <h3>Register order-bound evidence</h3>
               <p>
-                The buyer selects an HTTPS fixture whose URL contains the exact order ID and whose
-                canonical item, validity window, and expected body hash were frozen at creation.
+                A separate issuer signs a transaction binding one HTTPS receipt, SHA-256,
+                observation time, and unique nonce to the exact order. Bundled receipts cover order 0;
+                later orders need newly published receipts. The buyer only submits a reason.
               </p>
             </article>
             <article>
@@ -245,14 +246,14 @@ export const DocsPage = () => {
               <p>The snapshot is fixed when the seller creates the order.</p>
             </article>
             <article>
-              <h3>Buyer-only dispute access</h3>
-              <p>Only the order buyer can submit evidence or use the retry.</p>
+              <h3>Separated evidence authority</h3>
+              <p>The issuer cannot be an order party. Only the issuer registers receipts; only the buyer requests evaluation.</p>
             </article>
             <article>
-              <h3>Immutable evidence policy</h3>
+              <h3>Signed per-order provenance</h3>
               <p>
-                Each order commits to order-specific source URLs, canonical item IDs, validity
-                windows, publisher metadata, and expected content hashes before a dispute exists.
+                The issuer registration binds the order, item policy, publisher key, observation
+                window, one-time nonce, URL, and exact content hash before evaluation.
               </p>
             </article>
             <article>
@@ -272,8 +273,8 @@ export const DocsPage = () => {
             <article>
               <h3>Evidence commitment</h3>
               <p>
-                Each submission stores a canonical commitment to its URLs, claim, observation
-                time, policy hash, attestation hashes, and exact evidence bytes.
+                Each attempt stores a canonical commitment to its receipt, claim, authenticated
+                observation time, policy hash, nonce, attestation hash, and exact evidence bytes.
               </p>
             </article>
             <article>
@@ -310,8 +311,12 @@ export const DocsPage = () => {
               <span>Public state read for one order</span>
             </div>
             <div>
-              <code>open_dispute(order_id, ...) -&gt; None</code>
-              <span>Buyer evidence write for one order</span>
+              <code>register_evidence_receipt(order_id, url, hash, nonce, observed_at) -&gt; None</code>
+              <span>Evidence-issuer write binding one receipt to one order</span>
+            </div>
+            <div>
+              <code>open_dispute(order_id, reason) -&gt; None</code>
+              <span>Buyer requests evaluation of the registered receipt</span>
             </div>
             <div>
               <code>confirm_delivery(order_id) -&gt; None</code>
@@ -324,6 +329,10 @@ export const DocsPage = () => {
             <div>
               <code>get_upgrader() -&gt; bytes</code>
               <span>Returns the registered Root Slot upgrader</span>
+            </div>
+            <div>
+              <code>get_evidence_issuer() -&gt; bytes</code>
+              <span>Returns the only receipt-registration signer</span>
             </div>
             <div>
               <code>upgrade(new_code) -&gt; None</code>

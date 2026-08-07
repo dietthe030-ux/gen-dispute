@@ -1,124 +1,42 @@
 import React, { useState } from 'react'
-import {
-  EVIDENCE_ORIGIN,
-  getEvidencePreset,
-  isRegisteredEvidenceUrl,
-  type EvidencePresetType,
-} from './evidencePresets'
 
 interface DisputeFormProps {
-  onSubmit: (reason: string, evidenceUrl1: string, evidenceUrl2: string) => void
+  onSubmit: (reason: string) => void
   isLoading: boolean
   attempts: number
-  listingUrl: string
-  orderId: number
 }
 
-export const DisputeForm: React.FC<DisputeFormProps> = ({
-  onSubmit,
-  isLoading,
-  attempts,
-  listingUrl,
-  orderId,
-}) => {
+export const DisputeForm: React.FC<DisputeFormProps> = ({ onSubmit, isLoading, attempts }) => {
   const [reason, setReason] = useState('')
-  const [evidenceUrl1, setEvidenceUrl1] = useState('')
-  const [evidenceUrl2, setEvidenceUrl2] = useState('')
   const [error, setError] = useState('')
-  const [selectedPreset, setSelectedPreset] = useState('')
+  const isRetry = attempts > 0
 
-  const applyPreset = (presetType: EvidencePresetType) => {
-    const preset = getEvidencePreset(listingUrl, presetType)
-    setSelectedPreset(presetType)
-    setReason(preset.reason)
-    setEvidenceUrl1(`${EVIDENCE_ORIGIN}${preset.fixture}?order_id=${orderId}`)
-    setEvidenceUrl2('')
-  }
-
-  const handleFormSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+  const submit = (event: React.FormEvent) => {
+    event.preventDefault()
     setError('')
-
     if (reason.trim().length < 5) {
       setError('Reason must be at least 5 characters.')
       return
     }
-    if (!isRegisteredEvidenceUrl(evidenceUrl1, orderId)) {
-      setError('Evidence URL 1 must be a registered immutable demo fixture.')
-      return
-    }
-    if (evidenceUrl2 && !isRegisteredEvidenceUrl(evidenceUrl2, orderId)) {
-      setError('Evidence URL 2 must be a registered immutable demo fixture.')
-      return
-    }
-
-    onSubmit(reason, evidenceUrl1, evidenceUrl2)
+    onSubmit(reason)
   }
-
-  const isRetry = attempts > 0
 
   return (
     <section className="card border-warning" aria-labelledby="dispute-form-title">
-      <div className="card-header-flex">
-        <div>
-          <h2 id="dispute-form-title" className="card-title text-warning">
-            {isRetry ? 'Retry dispute' : 'Open dispute'}
-          </h2>
-          <p className="card-lede">
-            {isRetry
-              ? 'One final evaluation with updated reason and evidence.'
-              : 'Choose evidence from the immutable source policy frozen into this order.'}
-          </p>
-        </div>
-      </div>
-
+      <h2 id="dispute-form-title" className="card-title text-warning">
+        {isRetry ? 'Retry dispute' : 'Open dispute'}
+      </h2>
+      <p className="card-lede">
+        {isRetry
+          ? 'One final evaluation after the evidence issuer registers a new receipt.'
+          : 'The contract evaluates the issuer-registered receipt for this order.'}
+      </p>
       {isRetry && (
         <div className="alert alert-warning" role="status" style={{ marginBottom: 16 }}>
           Retry {attempts}/2. Escrow stays locked until a valid verdict.
         </div>
       )}
-
-      <div className="preset-container">
-        <span className="preset-label" id="evidence-preset-label">
-          Test evidence for {listingUrl.includes('rolex_v2') ? 'the Casio listing' : 'the Rolex listing'}
-        </span>
-        <div
-          className="preset-buttons"
-          role="group"
-          aria-labelledby="evidence-preset-label"
-        >
-          <button
-            type="button"
-            onClick={() => applyPreset('match')}
-            className={`btn btn-sm btn-outline-success${selectedPreset === 'match' ? ' is-selected' : ''}`}
-          >
-            Match (0%)
-          </button>
-          <button
-            type="button"
-            onClick={() => applyPreset('partial')}
-            className={`btn btn-sm btn-outline-warning${selectedPreset === 'partial' ? ' is-selected' : ''}`}
-          >
-            Partial (50%)
-          </button>
-          <button
-            type="button"
-            onClick={() => applyPreset('mismatch')}
-            className={`btn btn-sm btn-outline-danger${selectedPreset === 'mismatch' ? ' is-selected' : ''}`}
-          >
-            Mismatch (100%)
-          </button>
-          <button
-            type="button"
-            onClick={() => applyPreset('injection')}
-            className={`btn btn-sm btn-outline-secondary${selectedPreset === 'injection' ? ' is-selected' : ''}`}
-          >
-            Injection
-          </button>
-        </div>
-      </div>
-
-      <form onSubmit={handleFormSubmit} className="form-group" noValidate>
+      <form onSubmit={submit} className="form-group" noValidate>
         <div className="input-group">
           <label htmlFor="dispute-reason">Reason</label>
           <textarea
@@ -133,56 +51,9 @@ export const DisputeForm: React.FC<DisputeFormProps> = ({
             required
           />
         </div>
-
-        <div className="input-group">
-          <label htmlFor="evidence-1">Evidence URL 1</label>
-          <input
-            id="evidence-1"
-            name="evidence1"
-            type="url"
-            autoComplete="off"
-            spellCheck={false}
-            placeholder="https://…/fixture_evidence_….html"
-            value={evidenceUrl1}
-            onChange={(e) => setEvidenceUrl1(e.target.value)}
-            disabled={isLoading}
-            required
-          />
-          <span className="form-help">Only byte-hash-pinned GenDispute demo fixtures are accepted.</span>
-        </div>
-
-        <div className="input-group">
-          <label htmlFor="evidence-2">Evidence URL 2 (optional)</label>
-          <input
-            id="evidence-2"
-            name="evidence2"
-            type="url"
-            autoComplete="off"
-            spellCheck={false}
-            placeholder="https://…"
-            value={evidenceUrl2}
-            onChange={(e) => setEvidenceUrl2(e.target.value)}
-            disabled={isLoading}
-          />
-        </div>
-
-        {error && (
-          <div className="form-error" role="alert">
-            {error}
-          </div>
-        )}
-
+        {error && <div className="form-error" role="alert">{error}</div>}
         <button type="submit" disabled={isLoading} className="btn btn-warning btn-block">
-          {isLoading ? (
-            <span className="spinner-container">
-              <span className="spinner" aria-hidden="true" />
-              Submitting dispute…
-            </span>
-          ) : isRetry ? (
-            'Submit retry'
-          ) : (
-            'Submit dispute'
-          )}
+          {isLoading ? 'Submitting dispute…' : isRetry ? 'Submit retry' : 'Submit dispute'}
         </button>
       </form>
     </section>

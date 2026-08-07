@@ -22,26 +22,10 @@ FIXTURE_REGISTRY = {
 
 EVIDENCE_ORIGIN = "https://gen-dispute.vercel.app/fixtures/"
 EVIDENCE_PUBLISHER = "GENDISPUTE_DEMO_ATTESTATION_V1"
-POLICY_VERSION = "GENDISPUTE_SOURCE_POLICY_V2"
+POLICY_VERSION = "GENDISPUTE_ISSUER_POLICY_V3"
 ATTESTATION_SCHEMA = "GENDISPUTE_EVIDENCE_ATTESTATION_V1"
 ATTESTATION_START = '<script id="gendispute-attestation" type="application/json">'
 ATTESTATION_END = "</script>"
-
-# Exact HTTPS URLs and expected body hashes are frozen into each order's policy
-# hash. The publisher is a narrow demo attestation origin independent of the
-# named buyer and seller. Tuple fields: item_id, evidence_set_id, valid_from,
-# valid_until, expected_body_sha256.
-EVIDENCE_SOURCE_REGISTRY = {
-    EVIDENCE_ORIGIN + "fixture_evidence_match.html": ("WATCH_ROLEX_SUBMARINER", "ROLEX_MATCH", 0, 4102444800, "a2ee0c2837ec830695bb3d8442b8c2398cae547fa11469760f26295f376e1fe0"),
-    EVIDENCE_ORIGIN + "fixture_evidence_partial.html": ("WATCH_ROLEX_SUBMARINER", "ROLEX_PARTIAL", 0, 4102444800, "e542c8fee254e1894bcf072f8bcd6b72e1848b3414da63be26038f0fbc5cd79d"),
-    EVIDENCE_ORIGIN + "fixture_evidence_full_mismatch.html": ("WATCH_ROLEX_SUBMARINER", "ROLEX_MISMATCH", 0, 4102444800, "874aa5b6f911d34a5d61a02274fb0fa43a5f98b024bcfc89d902df2a69f29284"),
-    EVIDENCE_ORIGIN + "fixture_prompt_injection.html": ("WATCH_ROLEX_SUBMARINER", "ROLEX_MATCH", 0, 4102444800, "39290c86117e9595f27be743b6ba9ede102abce8dfb5c67df1e0c331004ce7fa"),
-    EVIDENCE_ORIGIN + "fixture_evidence_casio_match.html": ("WATCH_CASIO_DIGITAL", "CASIO_MATCH", 0, 4102444800, "10bb8b338aee65cbc0daca18358a902214412c45a8363694ffac786f681b3861"),
-    EVIDENCE_ORIGIN + "fixture_evidence_casio_partial.html": ("WATCH_CASIO_DIGITAL", "CASIO_PARTIAL", 0, 4102444800, "cd421784621f9669a39f8bf80bb8d23ea68f10e2ea9f06bacdc0387e849e8b54"),
-    EVIDENCE_ORIGIN + "fixture_evidence_rolex_instead_of_casio.html": ("WATCH_CASIO_DIGITAL", "CASIO_MISMATCH", 0, 4102444800, "9d9ed4d7a62e0736b53650edf3e8f832d53bdfdc91e9096a50883692fde58e92"),
-    EVIDENCE_ORIGIN + "fixture_prompt_injection_casio.html": ("WATCH_CASIO_DIGITAL", "CASIO_MATCH", 0, 4102444800, "de4c69fbd35fc784c89741592c247f2048684614ba2d6f4ad8aff5dcdd35fa07"),
-    EVIDENCE_ORIGIN + "fixture_stale.html": ("WATCH_ROLEX_SUBMARINER", "ROLEX_STALE", 0, 1, "0000000000000000000000000000000000000000000000000000000000000000"),
-}
 
 MIN_TIMEOUT_SECONDS = 60
 MAX_TIMEOUT_SECONDS = 30 * 24 * 60 * 60
@@ -50,6 +34,8 @@ MAX_EVIDENCE_URL_CHARS = 256
 MAX_LISTING_SNAPSHOT_CHARS = 1000
 MAX_ITEM_DESCRIPTION_CHARS = 500
 MAX_REASON_CHARS = 500
+MAX_EVIDENCE_NONCE_CHARS = 128
+MAX_EVIDENCE_AGE_SECONDS = 24 * 60 * 60
 MAX_EVIDENCE_BYTES = 16 * 1024
 MAX_ATTESTATION_CHARS = 4096
 MAX_ATTESTATION_FACTS = 12
@@ -95,13 +81,21 @@ class Order:
     evidence_policy_hash: str
     evidence_observed_at_1: u256
     evidence_observed_at_2: u256
+    evidence_receipt_url: str
+    evidence_receipt_sha256: str
+    evidence_nonce: str
+    evidence_receipt_registered_at: u256
+    evidence_receipt_observed_at: u256
 
 class GenDispute(gl.Contract):
     orders: DynArray[Order]
     upgrader: Address
+    evidence_issuer: Address
+    used_evidence_nonces: DynArray[str]
 
     def __init__(self):
         self.upgrader = gl.message.sender_address
+        self.evidence_issuer = gl.message.sender_address
         root = gl.storage.Root.get()
         root.upgraders.get().append(self.upgrader)
 
@@ -130,6 +124,8 @@ class GenDispute(gl.Contract):
             raise gl.vm.UserError("Escrow amount must be positive")
         if buyer_addr == gl.message.sender_address:
             raise gl.vm.UserError("Buyer cannot be seller")
+        if gl.message.sender_address == self.evidence_issuer or buyer_addr == self.evidence_issuer:
+            raise gl.vm.UserError("Evidence issuer cannot be an order party")
         if not (listing_url.startswith("http://") or listing_url.startswith("https://")):
             raise gl.vm.UserError("Invalid URL scheme")
         if len(listing_url) > MAX_LISTING_URL_CHARS:
@@ -148,27 +144,11 @@ class GenDispute(gl.Contract):
 
         created_at = self._now()
         order_id = u256(len(self.orders))
-        order_query = "?order_id=" + str(int(order_id))
         item_id = listing_record[1]
-        allowed_source_bases = sorted(
-            base_url
-            for base_url, source_record in EVIDENCE_SOURCE_REGISTRY.items()
-            if source_record[0] == item_id
-            and source_record[2] <= created_at
-            and source_record[3] >= created_at
-        )
-        allowed_sources = [
-            {
-                "body_sha256": EVIDENCE_SOURCE_REGISTRY[base_url][4],
-                "url": base_url + order_query,
-                "valid_from": EVIDENCE_SOURCE_REGISTRY[base_url][2],
-                "valid_until": EVIDENCE_SOURCE_REGISTRY[base_url][3],
-            }
-            for base_url in allowed_source_bases
-        ]
         source_policy = json.dumps(
             {
-                "allowed_sources": allowed_sources,
+                "evidence_origin": EVIDENCE_ORIGIN,
+                "issuer": self.evidence_issuer.as_bytes.hex(),
                 "item_id": item_id,
                 "publisher": EVIDENCE_PUBLISHER,
                 "version": POLICY_VERSION,
@@ -208,17 +188,65 @@ class GenDispute(gl.Contract):
                 evidence_policy_hash,
                 u256(0),
                 u256(0),
+                "",
+                "",
+                "",
+                u256(0),
+                u256(0),
             )
         )
         return order_id
+
+    @gl.public.write
+    def register_evidence_receipt(
+        self,
+        order_id: u256,
+        receipt_url: str,
+        receipt_sha256: str,
+        evidence_nonce: str,
+        observed_at: u256,
+    ) -> None:
+        order = self._get_order(order_id)
+        registered_at = self._now()
+        observed_at_value = int(observed_at)
+        if gl.message.sender_address != self.evidence_issuer:
+            raise gl.vm.UserError("Only the evidence issuer can register a receipt")
+        if order.status not in ["OPEN", "UNDETERMINED"]:
+            raise gl.vm.UserError("Order cannot accept an evidence receipt")
+        if registered_at >= int(order.expires_at):
+            raise gl.vm.UserError("Evidence receipt registration window has expired")
+        if order.status == "OPEN" and order.evidence_receipt_url != "":
+            raise gl.vm.UserError("Evidence receipt is already registered")
+        if not receipt_url.startswith(EVIDENCE_ORIGIN) or len(receipt_url) > MAX_EVIDENCE_URL_CHARS:
+            raise gl.vm.UserError("Evidence receipt URL is outside the trusted origin")
+        if (
+            len(receipt_sha256) != 64
+            or any(c not in "0123456789abcdef" for c in receipt_sha256)
+        ):
+            raise gl.vm.UserError("Evidence receipt SHA-256 is invalid")
+        if len(evidence_nonce) == 0 or len(evidence_nonce) > MAX_EVIDENCE_NONCE_CHARS:
+            raise gl.vm.UserError("Evidence nonce length is invalid")
+        if (
+            observed_at_value < int(order.created_at)
+            or observed_at_value > registered_at
+            or registered_at - observed_at_value > MAX_EVIDENCE_AGE_SECONDS
+        ):
+            raise gl.vm.UserError("Evidence observation time is outside the valid order window")
+        if evidence_nonce in self.used_evidence_nonces:
+            raise gl.vm.UserError("Evidence nonce has already been used")
+
+        self.used_evidence_nonces.append(evidence_nonce)
+        order.evidence_receipt_url = receipt_url
+        order.evidence_receipt_sha256 = receipt_sha256
+        order.evidence_nonce = evidence_nonce
+        order.evidence_receipt_registered_at = u256(registered_at)
+        order.evidence_receipt_observed_at = u256(observed_at_value)
 
     @gl.public.write
     def open_dispute(
         self,
         order_id: u256,
         reason: str,
-        evidence_url_1: str,
-        evidence_url_2: str = "",
     ) -> None:
         order = self._get_order(order_id)
         observed_at = self._now()
@@ -234,18 +262,6 @@ class GenDispute(gl.Contract):
             raise gl.vm.UserError("Dispute reason is required")
         if len(reason) > MAX_REASON_CHARS:
             raise gl.vm.UserError("Dispute reason is too long")
-        if evidence_url_1 == "":
-            raise gl.vm.UserError("At least one evidence URL is required")
-        if not (evidence_url_1.startswith("http://") or evidence_url_1.startswith("https://")):
-            raise gl.vm.UserError("Invalid URL scheme")
-        if len(evidence_url_1) > MAX_EVIDENCE_URL_CHARS:
-            raise gl.vm.UserError("Evidence URL is too long")
-        if evidence_url_2 != "":
-            if not (evidence_url_2.startswith("http://") or evidence_url_2.startswith("https://")):
-                raise gl.vm.UserError("Invalid URL scheme")
-            if len(evidence_url_2) > MAX_EVIDENCE_URL_CHARS:
-                raise gl.vm.UserError("Evidence URL is too long")
-
         submission_number = int(order.dispute_attempts) + 1
         if submission_number == 1:
             if order.evidence_commitment_1 != "":
@@ -253,13 +269,18 @@ class GenDispute(gl.Contract):
         else:
             if order.evidence_commitment_2 != "":
                 raise gl.vm.UserError("Evidence submission already recorded")
+            if (
+                order.evidence_receipt_url == order.evidence_url_1
+                and order.evidence_receipt_sha256 == order.evidence_sha256_1
+            ):
+                raise gl.vm.UserError("A new issuer receipt is required for retry")
 
         order.dispute_reason = reason
-        order.evidence_url_1 = evidence_url_1
-        order.evidence_url_2 = evidence_url_2
         if submission_number == 1:
+            order.evidence_url_1 = order.evidence_receipt_url
             order.evidence_observed_at_1 = u256(observed_at)
         else:
+            order.evidence_url_2 = order.evidence_receipt_url
             order.evidence_observed_at_2 = u256(observed_at)
 
         def store_evidence_binding(
@@ -270,15 +291,15 @@ class GenDispute(gl.Contract):
             hashes = evidence_hashes if isinstance(evidence_hashes, list) else []
             attestations = attestation_hashes if isinstance(attestation_hashes, list) else []
             evidence_sha256_1 = hashes[0] if len(hashes) > 0 else ""
-            evidence_sha256_2 = hashes[1] if len(hashes) > 1 else ""
             canonical_evidence = json.dumps(
                 {
                     "attestation_hashes": attestations,
                     "evidence_policy_hash": order.evidence_policy_hash,
-                    "evidence_sha256_1": evidence_sha256_1,
-                    "evidence_sha256_2": evidence_sha256_2,
-                    "evidence_url_1": evidence_url_1,
-                    "evidence_url_2": evidence_url_2,
+                    "evidence_nonce": order.evidence_nonce,
+                    "evidence_receipt_registered_at": int(order.evidence_receipt_registered_at),
+                    "evidence_receipt_observed_at": int(order.evidence_receipt_observed_at),
+                    "receipt_sha256": evidence_sha256_1,
+                    "receipt_url": order.evidence_receipt_url,
                     "item_id": order.item_id,
                     "observed_at": observed_at,
                     "order_id": int(order_id),
@@ -292,11 +313,11 @@ class GenDispute(gl.Contract):
                 ensure_ascii=True,
             )
             evidence_commitment = hashlib.sha256(canonical_evidence.encode("utf-8")).hexdigest()
-            order.evidence_sha256_1 = evidence_sha256_1
-            order.evidence_sha256_2 = evidence_sha256_2
             if submission_number == 1:
+                order.evidence_sha256_1 = evidence_sha256_1
                 order.evidence_commitment_1 = evidence_commitment
             else:
+                order.evidence_sha256_2 = evidence_sha256_1
                 order.evidence_commitment_2 = evidence_commitment
 
         def mark_undetermined(message: str, result_code: str) -> None:
@@ -306,35 +327,13 @@ class GenDispute(gl.Contract):
             order.last_error = message
             order.outcome = "UNDETERMINED"
 
-        evidence_sources = [evidence_url_1]
-        if evidence_url_2 != "":
-            evidence_sources.append(evidence_url_2)
-
-        if len(evidence_sources) != len(set(evidence_sources)):
-            mark_undetermined("Duplicate evidence sources are not independent", "DUPLICATE_SOURCE")
+        if order.evidence_receipt_url == "":
+            mark_undetermined("No issuer-authenticated evidence receipt is registered", "MISSING_RECEIPT")
             return
-
-        order_query = "?order_id=" + str(int(order_id))
-        allowed_source_bases = sorted(
-            base_url
-            for base_url, source_record in EVIDENCE_SOURCE_REGISTRY.items()
-            if source_record[0] == order.item_id
-            and source_record[2] <= int(order.created_at)
-            and source_record[3] >= int(order.created_at)
-        )
-        allowed_sources = [
-            {
-                "body_sha256": EVIDENCE_SOURCE_REGISTRY[base_url][4],
-                "url": base_url + order_query,
-                "valid_from": EVIDENCE_SOURCE_REGISTRY[base_url][2],
-                "valid_until": EVIDENCE_SOURCE_REGISTRY[base_url][3],
-            }
-            for base_url in allowed_source_bases
-        ]
-        allowed_source_urls = [source["url"] for source in allowed_sources]
         current_policy = json.dumps(
             {
-                "allowed_sources": allowed_sources,
+                "evidence_origin": EVIDENCE_ORIGIN,
+                "issuer": self.evidence_issuer.as_bytes.hex(),
                 "item_id": order.item_id,
                 "publisher": EVIDENCE_PUBLISHER,
                 "version": POLICY_VERSION,
@@ -348,33 +347,6 @@ class GenDispute(gl.Contract):
             mark_undetermined("The order's frozen evidence policy no longer matches", "POLICY_MISMATCH")
             return
 
-        source_records = []
-        for url in evidence_sources:
-            if not url.endswith(order_query):
-                mark_undetermined("Evidence source is bound to a different order", "WRONG_ORDER")
-                return
-            base_url = url[:-len(order_query)]
-            if base_url not in EVIDENCE_SOURCE_REGISTRY:
-                mark_undetermined("Evidence source is not authorized for this order", "UNAUTHORIZED_SOURCE")
-                return
-            source_record = EVIDENCE_SOURCE_REGISTRY[base_url]
-            if source_record[0] != order.item_id:
-                mark_undetermined("Evidence concerns a different canonical item", "WRONG_ITEM")
-                return
-            if observed_at < source_record[2] or observed_at > source_record[3]:
-                mark_undetermined("Evidence source is outside its frozen validity window", "STALE_SOURCE")
-                return
-            if url not in allowed_source_urls:
-                mark_undetermined("Evidence source is outside the order's frozen policy", "POLICY_SOURCE_MISMATCH")
-                return
-            source_records.append(source_record)
-
-        if len(source_records) > 1:
-            evidence_set_id = source_records[0][1]
-            if any(source_record[1] != evidence_set_id for source_record in source_records[1:]):
-                mark_undetermined("Evidence sources contain conflicting attestations", "CONFLICTING_SOURCES")
-                return
-
         order.status = "DISPUTE_PENDING"
 
         # Capture primitives for nondeterministic closures. Buyer reason and
@@ -382,7 +354,11 @@ class GenDispute(gl.Contract):
         listing_snapshot = order.listing_snapshot
         item_id = order.item_id
         policy_hash = order.evidence_policy_hash
-        source_records_for_eval = source_records
+        receipt_url = order.evidence_receipt_url
+        receipt_sha256 = order.evidence_receipt_sha256
+        evidence_nonce = order.evidence_nonce
+        receipt_registered_at = int(order.evidence_receipt_registered_at)
+        evidence_sources = [receipt_url]
 
         def build_evaluation_prompt(canonical_input: str) -> str:
             return f"""
@@ -438,7 +414,7 @@ class GenDispute(gl.Contract):
                 attestation_hashes = []
                 attestations = []
                 all_sufficient = True
-                for source_index, url in enumerate(evidence_sources):
+                for url in evidence_sources:
                     ev_resp = gl.nondet.web.get(url)
                     if int(ev_resp.status) != 200:
                         return undetermined_result("Evidence source returned a non-success HTTP status", evidence_hashes, attestation_hashes)
@@ -459,7 +435,8 @@ class GenDispute(gl.Contract):
                         return undetermined_result("Evidence body length is invalid", evidence_hashes, attestation_hashes)
                     evidence_hash = hashlib.sha256(ev_body).hexdigest()
                     evidence_hashes.append(evidence_hash)
-                    source_record = source_records_for_eval[source_index]
+                    if evidence_hash != receipt_sha256:
+                        return undetermined_result("Evidence bytes do not match the issuer-registered receipt", evidence_hashes, attestation_hashes)
                     ev_text = ev_body.decode("utf-8", errors="strict")
                     lowered_text = ev_text.lower()
                     if any(marker in lowered_text for marker in HOSTILE_MARKERS):
@@ -485,8 +462,9 @@ class GenDispute(gl.Contract):
                     if (
                         attestation.get("schema") != ATTESTATION_SCHEMA
                         or attestation.get("publisher_id") != EVIDENCE_PUBLISHER
+                        or attestation.get("order_id") != int(order_id)
                         or attestation.get("item_id") != item_id
-                        or attestation.get("evidence_set_id") != source_record[1]
+                        or attestation.get("evidence_nonce") != evidence_nonce
                     ):
                         return undetermined_result("Evidence attestation does not match the frozen order subject", evidence_hashes, attestation_hashes)
                     facts = attestation.get("facts")
@@ -512,8 +490,6 @@ class GenDispute(gl.Contract):
                     attestation_hashes.append(
                         hashlib.sha256(canonical_attestation.encode("utf-8")).hexdigest()
                     )
-                    if evidence_hash != source_record[4]:
-                        return undetermined_result("Evidence bytes do not match the immutable order policy", evidence_hashes, attestation_hashes)
                     attestations.append(attestation)
 
                 if not all_sufficient:
@@ -525,7 +501,8 @@ class GenDispute(gl.Contract):
                 canonical_input = json.dumps(
                     {
                         "evidence": attestations,
-                        "evidence_observed_at": observed_at,
+                        "evidence_registered_at": receipt_registered_at,
+                        "evidence_fetched_at": observed_at,
                         "evidence_policy_hash": policy_hash,
                         "listing_snapshot": listing_snapshot,
                         "order_id": int(order_id),
@@ -797,6 +774,10 @@ class GenDispute(gl.Contract):
         return self.upgrader.as_bytes
 
     @gl.public.view
+    def get_evidence_issuer(self) -> bytes:
+        return self.evidence_issuer.as_bytes
+
+    @gl.public.view
     def get_order_count(self) -> int:
         return len(self.orders)
 
@@ -833,6 +814,11 @@ class GenDispute(gl.Contract):
             "evidence_policy_hash": order.evidence_policy_hash,
             "evidence_observed_at_1": int(order.evidence_observed_at_1),
             "evidence_observed_at_2": int(order.evidence_observed_at_2),
+            "evidence_receipt_url": order.evidence_receipt_url,
+            "evidence_receipt_sha256": order.evidence_receipt_sha256,
+            "evidence_nonce": order.evidence_nonce,
+            "evidence_receipt_registered_at": int(order.evidence_receipt_registered_at),
+            "evidence_receipt_observed_at": int(order.evidence_receipt_observed_at),
             "status": order.status,
             "dispute_attempts": int(order.dispute_attempts),
             "dispute_reason": order.dispute_reason,

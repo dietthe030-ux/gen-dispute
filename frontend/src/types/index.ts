@@ -21,6 +21,11 @@ export interface OrderState {
   itemDescription: string;
   itemId: string;
   evidencePolicyHash: string;
+  evidenceReceiptUrl?: string;
+  evidenceReceiptSha256?: string;
+  evidenceNonce?: string;
+  evidenceReceiptRegisteredAt?: number;
+  evidenceReceiptObservedAt?: number;
   evidenceObservedAt: number[];
   status: 'NONE' | 'OPEN' | 'DISPUTE_PENDING' | 'RESOLVED' | 'UNDETERMINED' | 'PAID_OUT';
   disputeAttempts: number;

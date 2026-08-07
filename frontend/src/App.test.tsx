@@ -89,6 +89,7 @@ describe('App Component', () => {
         itemDescription: 'Vintage Watch description',
         itemId: 'WATCH_ROLEX_SUBMARINER',
         evidencePolicyHash: 'a'.repeat(64),
+        evidenceReceiptUrl: 'https://gen-dispute.vercel.app/fixtures/order-0.html',
         evidenceObservedAt: [],
         status: 'OPEN',
         disputeAttempts: 0,
@@ -198,6 +199,7 @@ describe('App Component', () => {
         disputeAttempts: 1,
         disputeReason: 'broken dial',
         evidenceUrls: ['https://evidence.url'],
+        evidenceReceiptUrl: 'https://gen-dispute.vercel.app/fixtures/order-0-v1.html',
         refundTier: null,
         buyerPayout: null,
         sellerPayout: null,
@@ -243,6 +245,7 @@ describe('App Component', () => {
         disputeAttempts: 1,
         disputeReason: 'broken dial',
         evidenceUrls: ['https://evidence.url'],
+        evidenceReceiptUrl: 'https://gen-dispute.vercel.app/fixtures/order-0-v2.html',
         refundTier: null,
         buyerPayout: null,
         sellerPayout: null,
@@ -266,27 +269,17 @@ describe('App Component', () => {
     expect(screen.getByText('Retry dispute')).toBeInTheDocument()
     expect(screen.queryByText('Undetermined')).not.toBeInTheDocument()
 
-    // 5. Fill out and submit updated evidence
+    // 5. Fill out and submit the updated reason. Evidence is issuer-controlled.
     const reasonInput = screen.getByLabelText('Reason')
-    const evidenceInput = screen.getByLabelText('Evidence URL 1')
 
     fireEvent.change(reasonInput, { target: { value: 'New discrepancy description' } })
-    fireEvent.change(evidenceInput, {
-      target: {
-        value: 'https://gen-dispute.vercel.app/fixtures/fixture_evidence_partial.html?order_id=0',
-      },
-    })
 
     const submitBtn = screen.getByRole('button', { name: 'Submit retry' })
     fireEvent.click(submitBtn)
 
     // 6. Verifies mockSetIsRetrying(false) and openDispute gets called with updated values
     expect(mockSetIsRetrying).toHaveBeenCalledWith(false)
-    expect(mockOpenDispute).toHaveBeenCalledWith(
-      'New discrepancy description',
-      'https://gen-dispute.vercel.app/fixtures/fixture_evidence_partial.html?order_id=0',
-      ''
-    )
+    expect(mockOpenDispute).toHaveBeenCalledWith('New discrepancy description')
   })
 
   it('prevents retrying when disputeAttempts >= 2', () => {

@@ -1,67 +1,41 @@
 import { describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { DisputeForm } from './DisputeForm'
-import { getEvidencePreset } from './evidencePresets'
+import { EvidenceReceiptForm } from './EvidenceReceiptForm'
 
-describe('DisputeForm evidence presets', () => {
-  it('uses fact-only Rolex evidence for a Rolex listing', () => {
-    expect(getEvidencePreset('https://listing.url', 'mismatch')).toEqual({
-      reason: 'I received a Casio digital watch instead of the listed Rolex Submariner.',
-      fixture: 'fixture_evidence_full_mismatch.html',
-    })
-  })
-
-  it('uses Casio-specific evidence for the Version B listing', () => {
-    expect(getEvidencePreset('https://listing.url/rolex_v2', 'mismatch')).toEqual({
-      reason: 'I received a Rolex Submariner instead of the Casio watch in the stored listing snapshot.',
-      fixture: 'fixture_evidence_rolex_instead_of_casio.html',
-    })
-  })
-
-  it('fills a consistent mismatch claim for the currently selected Casio order', () => {
+describe('order-bound evidence flow', () => {
+  it('lets the buyer submit only a reason, not an outcome or evidence URL', () => {
     const onSubmit = vi.fn()
-    render(
-      <DisputeForm
-        onSubmit={onSubmit}
-        isLoading={false}
-        attempts={0}
-        listingUrl="https://listing.url/rolex_v2"
-        orderId={7}
-      />
-    )
+    render(<DisputeForm onSubmit={onSubmit} isLoading={false} attempts={0} />)
 
-    fireEvent.click(screen.getByRole('button', { name: 'Mismatch (100%)' }))
-
-    expect(screen.getByLabelText('Reason')).toHaveValue(
-      'I received a Rolex Submariner instead of the Casio watch in the stored listing snapshot.'
-    )
-    expect(screen.getByLabelText('Evidence URL 1')).toHaveValue(
-      'https://gen-dispute.vercel.app/fixtures/fixture_evidence_rolex_instead_of_casio.html?order_id=7'
-    )
-    expect(screen.getByText('Test evidence for the Casio listing')).toBeInTheDocument()
-  })
-
-  it('rejects evidence outside the frozen source registry', () => {
-    const onSubmit = vi.fn()
-    render(
-      <DisputeForm
-        onSubmit={onSubmit}
-        isLoading={false}
-        attempts={0}
-        listingUrl="https://listing.url"
-        orderId={0}
-      />
-    )
-
+    expect(screen.queryByText('Mismatch (100%)')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/Evidence URL/i)).not.toBeInTheDocument()
     fireEvent.change(screen.getByLabelText('Reason'), {
       target: { value: 'The delivered item is different.' },
     })
-    fireEvent.change(screen.getByLabelText('Evidence URL 1'), {
-      target: { value: 'https://buyer.example/evidence.html' },
-    })
     fireEvent.click(screen.getByRole('button', { name: 'Submit dispute' }))
+    expect(onSubmit).toHaveBeenCalledWith('The delivered item is different.')
+  })
 
+  it('rejects a buyer reason that is too short', () => {
+    const onSubmit = vi.fn()
+    render(<DisputeForm onSubmit={onSubmit} isLoading={false} attempts={0} />)
+    fireEvent.change(screen.getByLabelText('Reason'), { target: { value: 'bad' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Submit dispute' }))
     expect(onSubmit).not.toHaveBeenCalled()
-    expect(screen.getByRole('alert')).toHaveTextContent('registered immutable demo fixture')
+    expect(screen.getByRole('alert')).toHaveTextContent('at least 5 characters')
+  })
+
+  it('validates the issuer receipt hash before registration', () => {
+    const onSubmit = vi.fn()
+    render(<EvidenceReceiptForm onSubmit={onSubmit} isLoading={false} isRetry={false} />)
+    fireEvent.change(screen.getByLabelText('Receipt URL'), {
+      target: { value: 'https://gen-dispute.vercel.app/fixtures/order-0.html' },
+    })
+    fireEvent.change(screen.getByLabelText('Receipt SHA-256'), { target: { value: 'bad' } })
+    fireEvent.change(screen.getByLabelText('One-time evidence nonce'), { target: { value: 'ORDER_0_V1' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Register receipt' }))
+    expect(onSubmit).not.toHaveBeenCalled()
+    expect(screen.getByRole('alert')).toHaveTextContent('64-character SHA-256')
   })
 })

@@ -129,7 +129,7 @@ export const DisputeResult: React.FC<DisputeResultProps> = ({
 
           {canRetry ? (
             <div className="retry-action">
-              <p>One retry remains. Update evidence, then submit again.</p>
+              <p>One retry remains. Wait for the issuer to register a new receipt, then submit again.</p>
               <button type="button" onClick={onRetry} className="btn btn-warning btn-block">
                 Prepare retry
               </button>

@@ -118,6 +118,38 @@ export const OrderStatus: React.FC<OrderStatusProps> = ({ order }) => {
             {order.evidencePolicyHash}
           </div>
         </div>
+
+        <div className="status-item full-width">
+          <div className="status-label">Issuer-registered receipt</div>
+          <div className="status-value code-font">
+            {order.evidenceReceiptUrl ? (
+              <a href={order.evidenceReceiptUrl} target="_blank" rel="noreferrer" className="external-link">
+                {order.evidenceReceiptUrl}
+              </a>
+            ) : 'Not registered'}
+          </div>
+        </div>
+
+        {order.evidenceReceiptUrl && (
+          <>
+            <div className="status-item full-width">
+              <div className="status-label">Receipt SHA-256</div>
+              <div className="status-value code-font">{order.evidenceReceiptSha256}</div>
+            </div>
+            <div className="status-item full-width">
+              <div className="status-label">One-time evidence nonce</div>
+              <div className="status-value code-font">{order.evidenceNonce}</div>
+            </div>
+            <div className="status-item full-width">
+              <div className="status-label">Issuer observation time</div>
+              <div className="status-value">
+                {order.evidenceReceiptObservedAt
+                  ? new Date(order.evidenceReceiptObservedAt * 1000).toISOString()
+                  : 'Not recorded'}
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </section>
   )

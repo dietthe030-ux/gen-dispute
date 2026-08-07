@@ -9,6 +9,7 @@ import { TransactionProgress } from './components/TransactionProgress'
 import { SiteHeader } from './components/SiteHeader'
 import { OrderLookup } from './components/OrderLookup'
 import { SettlementActions } from './components/SettlementActions'
+import { EvidenceReceiptForm } from './components/EvidenceReceiptForm'
 
 const App: React.FC = () => {
   const {
@@ -19,11 +20,13 @@ const App: React.FC = () => {
     orderState,
     selectedOrderId,
     orderCount,
+    evidenceIssuer,
     isOrderLoading,
     connectWallet,
     disconnectWallet,
     createOrder,
     openDispute,
+    registerEvidenceReceipt,
     confirmDelivery,
     recoverExpiredOrder,
     loadOrder,
@@ -43,8 +46,8 @@ const App: React.FC = () => {
     await createOrder(buyer, listingUrl, listingSnapshot, description, amount, timeoutSeconds)
   }
 
-  const handleDisputeSubmit = async (reason: string, url1: string, url2: string) => {
-    await openDispute(reason, url1, url2)
+  const handleDisputeSubmit = async (reason: string) => {
+    await openDispute(reason)
   }
 
   const isConnected = !!account
@@ -57,6 +60,14 @@ const App: React.FC = () => {
 
   const isBuyer = !!(connectedAddress && buyerAddress && connectedAddress.toLowerCase() === buyerAddress.toLowerCase())
   const isSeller = !!(connectedAddress && sellerAddress && connectedAddress.toLowerCase() === sellerAddress.toLowerCase())
+  const isEvidenceIssuer = !!(
+    connectedAddress && evidenceIssuer && connectedAddress.toLowerCase() === evidenceIssuer.toLowerCase()
+  )
+  const hasFreshEvidenceReceipt = !!orderState?.evidenceReceiptUrl && (
+    orderState.disputeAttempts === 0 ||
+    orderState.evidenceReceiptUrl !== orderState.evidenceUrls.at(-1) ||
+    orderState.evidenceReceiptSha256 !== orderState.evidenceHashes.at(-1)
+  )
 
   const showProgress =
     isConnected &&
@@ -90,7 +101,9 @@ const App: React.FC = () => {
           {isConnected && orderState && (
             <div className="card role-info-card">
               <h2 className="card-title">Your role</h2>
-              {isBuyer ? (
+              {isEvidenceIssuer ? (
+                <div className="role-badge role-observer">Evidence issuer</div>
+              ) : isBuyer ? (
                 <div className="role-badge role-buyer">Buyer</div>
               ) : isSeller ? (
                 <div className="role-badge role-seller">Seller</div>
@@ -98,7 +111,9 @@ const App: React.FC = () => {
                 <div className="role-badge role-observer">Observer</div>
               )}
               <p className="role-desc">
-                {isBuyer
+                {isEvidenceIssuer
+                  ? 'You can register a content-addressed receipt for this order.'
+                  : isBuyer
                   ? 'You can confirm delivery or open a dispute while the order is open.'
                   : isSeller
                     ? 'You created this order. After the deadline, you can recover unresolved escrow.'
@@ -123,7 +138,7 @@ const App: React.FC = () => {
             <section className="card hero-card" aria-labelledby="welcome-heading">
               <h2 id="welcome-heading">Hold payment until the item checks out</h2>
               <p>
-                Seller deposits GEN into escrow. Buyer can dispute with order-bound demo evidence.
+                Seller deposits GEN into escrow. An independent issuer binds evidence to one order.
                 Validators settle a 0%, 50%, or 100% refund.
               </p>
               <ol className="hero-steps">
@@ -169,20 +184,43 @@ const App: React.FC = () => {
                     onRecoverExpired={recoverExpiredOrder}
                   />
 
+                  {isEvidenceIssuer &&
+                    ((orderState.status === 'OPEN' && !orderState.evidenceReceiptUrl) ||
+                      (orderState.status === 'UNDETERMINED' && orderState.disputeAttempts < 2)) && (
+                      <EvidenceReceiptForm
+                        onSubmit={registerEvidenceReceipt}
+                        isLoading={isSubmitting}
+                        isRetry={orderState.status === 'UNDETERMINED'}
+                      />
+                    )}
+
                   {isBuyer &&
                     (orderState.status === 'OPEN' ||
-                      (orderState.status === 'UNDETERMINED' && isRetrying)) && (
+                      (orderState.status === 'UNDETERMINED' && isRetrying)) &&
+                    hasFreshEvidenceReceipt && (
                       <DisputeForm
-                        onSubmit={async (reason, url1, url2) => {
+                        onSubmit={async (reason) => {
                           setIsRetrying(false)
-                          await handleDisputeSubmit(reason, url1, url2)
+                          await handleDisputeSubmit(reason)
                         }}
                         isLoading={isSubmitting}
                         attempts={orderState.disputeAttempts}
-                        listingUrl={orderState.listingUrl}
-                        orderId={orderState.orderId}
                       />
                     )}
+
+                  {isBuyer && orderState.status === 'OPEN' && !orderState.evidenceReceiptUrl && (
+                    <div className="card alert-card info">
+                      <h3>Waiting for evidence receipt</h3>
+                      <p>The independent evidence issuer must register an order-bound receipt before a dispute can be evaluated.</p>
+                    </div>
+                  )}
+
+                  {isBuyer && orderState.status === 'UNDETERMINED' && isRetrying && !hasFreshEvidenceReceipt && (
+                    <div className="card alert-card info">
+                      <h3>Waiting for replacement receipt</h3>
+                      <p>The evidence issuer must register a new URL, hash, and nonce before the retry can be submitted.</p>
+                    </div>
+                  )}
 
                   {(orderState.status === 'RESOLVED' ||
                     orderState.status === 'PAID_OUT' ||
@@ -207,7 +245,7 @@ const App: React.FC = () => {
                     </div>
                   )}
 
-                  {!isBuyer && !isSeller && (
+                  {!isBuyer && !isSeller && !isEvidenceIssuer && (
                     <div className="card alert-card warning">
                       <h3>View only</h3>
                       <p>

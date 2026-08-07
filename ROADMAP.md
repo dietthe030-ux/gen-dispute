@@ -4,14 +4,15 @@ This roadmap reflects source and local verification reviewed on August 8, 2026, 
 
 ## V1 Delivered
 
-GenDispute is a GenLayer Studionet escrow prototype for item-not-as-described disputes. A seller creates an isolated order, names the buyer, records a fixture-backed listing snapshot, and deposits native GEN. The named buyer can select one or two evidence pages from a source policy frozen into that order. The Intelligent Contract restricts the decision to a 0%, 50%, or 100% buyer refund, calculates complementary payouts, and emits native GEN transfers after consensus.
+GenDispute is a GenLayer Studionet escrow prototype for item-not-as-described disputes. A seller creates an isolated order, names the buyer, records a fixture-backed listing snapshot, and deposits native GEN. A separate on-chain evidence issuer registers one hash-pinned receipt for the exact order; the buyer submits only a reason. The Intelligent Contract restricts the decision to a 0%, 50%, or 100% buyer refund, calculates complementary payouts, and emits native GEN transfers after consensus.
 
 The remediation build includes:
 
 - deterministic deposit, participant, state, retry, duplicate-action, and URL guards;
 - explicit multi-order storage and order-ID reads;
 - exact frontend decoding of the ID returned by `create_order`, independent of the global order count;
-- exact HTTPS evidence retrieval with `gl.nondet.web.get`, after the order freezes order-ID-bound URLs, canonical item IDs, validity windows, publisher metadata, and expected SHA-256 body hashes;
+- issuer-only receipt registration that binds the exact order, canonical item policy, SHA-256, observation time, and globally unique nonce through a signed transaction;
+- exact HTTPS evidence retrieval with `gl.nondet.web.get`, followed by order ID, item ID, publisher ID, nonce, observation-window, and byte-hash validation;
 - structured semantic evaluation with `gl.nondet.exec_prompt`;
 - independent validator retrieval and reevaluation of the same evidence;
 - consensus comparison over `reason_code`, `refund_tier`, `evidence_sufficient`, and exact SHA-256 evidence-byte hashes, with schema and internal-consistency checks as supplemental guards;
@@ -20,8 +21,8 @@ The remediation build includes:
 - buyer-confirmed normal release, explicit order deadlines, and participant-triggered expired-order recovery;
 - a Root Slot upgrader registered at deployment, with authorization and non-empty-code guards;
 - React 19, TypeScript, Vite, `genlayer-js`, and injected EIP-1193 wallet integration;
-- listing-aware demo evidence presets that keep Rolex and Casio delivery facts aligned with the selected order;
-- explicit order lookup, buyer/seller/observer roles, account-change selection clearing, transaction progress, receipt execution checks, and error states; and
+- a reason-only buyer dispute form with no payout or evidence selection, plus a separate evidence-issuer registration form;
+- explicit order lookup, buyer/seller/evidence-issuer/observer roles, account-change selection clearing, transaction progress, receipt execution checks, and error states; and
 - `/docs`, root and frontend setup documentation, contract tests, and frontend tests.
 
 ### Verified evidence
@@ -29,8 +30,8 @@ The remediation build includes:
 | Area | Evidence |
 | --- | --- |
 | Public source | [dietthe030-ux/gen-dispute](https://github.com/dietthe030-ux/gen-dispute) contains the reviewed contract, frontend, tests, and documentation. |
-| Local contract verification | 47/47 tests pass, covering order/item/source/time binding, immutable evidence hashes, hostile inputs, independent verdict checks, commitments, deadlines, normal release, recovery, and Root Slot authorization. |
-| Local frontend verification | 36/36 tests pass, including concurrent order creation where the returned ID differs from `count - 1` and rejection of evidence outside the frozen order policy; Oxlint, TypeScript compilation, and the Vite production build pass. |
+| Local contract verification | 47/47 tests pass, covering issuer authorization, cross-order replay rejection, buyer outcome-selection rejection, order/item/time/nonce/hash binding, hostile inputs, independent verdict checks, commitments, deadlines, release, recovery, and Root Slot authorization. |
+| Local frontend verification | 36/36 tests pass, including concurrent returned-order decoding, issuer-registration calldata, and proof that the buyer UI exposes neither outcome presets nor evidence URL inputs; Oxlint, TypeScript compilation, and the Vite production build pass. |
 | Current public release | [gen-dispute.vercel.app](https://gen-dispute.vercel.app) and [`0x1E877E7B333D5371a75d2EF995763bcdabaeB9cE`](https://explorer-studio.genlayer.com/address/0x1E877E7B333D5371a75d2EF995763bcdabaeB9cE) remain historical V1 evidence. They do not yet prove the remediation build. |
 | Replacement deployment | Required before resubmission because the submitted V1 contract was frozen. No replacement address is claimed yet. |
 
@@ -39,7 +40,8 @@ The remediation build includes:
 Other current limitations are:
 
 - Listing creation is limited to a small hardcoded fixture registry; the listing URL itself is not fetched.
-- Evidence is limited to project-hosted, byte-hash-pinned demo attestations. The publisher identifier is policy-bound but not externally certified, and the exact bytes are not stored or made permanently available.
+- Evidence is limited to project-hosted, byte-hash-pinned demo attestations. The deployment wallet authenticates registrations and is contractually distinct from the parties, but it is not an external logistics or marketplace provider. Exact bytes are not stored permanently.
+- Packaged demonstration receipts are bound to order `0`; every later order requires a newly published issuer receipt with its own order ID and nonce.
 - The production evidence covers one supervised 100% material-mismatch refund; the 0% and 50% tiers have not been exercised live.
 - A separate previous test instance contains two funded orders and three undetermined attempts; that state does not migrate to production.
 - There is no mutual cancellation path. Expired recovery returns the seller-funded escrow to the seller.
@@ -58,7 +60,7 @@ Their need is not merely fund storage. They need a decision process that can ins
 No existing user base or partner community is claimed. The proposed first-user approach is:
 
 1. Run supervised demonstrations in GenLayer developer communities, hackathons, and marketplace-builder sessions.
-2. Use two funded Studionet wallets plus an observer wallet to demonstrate explicit order lookup, participant authorization, consensus progress, and each fixture-backed payout tier.
+2. Use separate seller, buyer, evidence-issuer, and observer wallets to demonstrate explicit order lookup, signed per-order receipt registration, replay rejection, consensus progress, and each bounded payout tier.
 3. Show the `/docs` route before signing so participants understand evidence hashing, payout bounds, normal release, and deadline recovery.
 4. Link every demonstration write to Explorer and distinguish wallet approval, `ACCEPTED`, `FINALIZED`, and successful GenVM execution.
 5. Collect structured feedback on wallet setup, evidence preparation, wait time, verdict clarity, and locked-fund recovery expectations.
@@ -73,7 +75,7 @@ All integrations below are proposals, not delivered features.
 | --- | --- | --- | --- |
 | IPFS, Arweave, or another content-addressed store | Preserves listing terms and evidence used in a verdict. | Store canonical hashes or immutable URIs; add retrieval, size, and fallback policies. | Provider selection, privacy review, validator retrieval tests, and a versioned content schema. |
 | Signed marketplace listing feeds | Reduces manual entry and gives the snapshot verifiable provenance. | Add adapters that normalize and bind signed listing fields to an order. | API permission, signature policy, rate-limit handling, and update/deletion rules. |
-| External signed evidence providers | Extends the current fixed demo attestations without accepting arbitrary buyer-controlled pages. | Verify provider signatures or content-addressed receipts and bind them to canonical order subjects and time windows. | Provider selection, key rotation, schema versioning, privacy review, and validator availability. |
+| External signed evidence providers | Replaces the deployment-wallet demo issuer with a logistics, inspection, or marketplace authority without accepting buyer-controlled pages. | Configure or upgrade the issuer key and retain the current order, time, nonce, and hash binding. | Provider selection, key rotation, schema versioning, privacy review, and validator availability. |
 | WalletConnect-compatible wallet layer | Expands supported desktop and mobile wallets. | Replace direct injected-provider assumptions with a tested wallet abstraction. | Confirm Studionet support and pass connect, switch, rejection, and account-change tests. |
 | Explorer/indexer and notifications | Lets users leave the page while consensus continues and later recover transaction context. | Index order state, receipt status, and opt-in notifications without making the indexer authoritative. | Stable APIs, privacy-preserving event schema, monitoring, and delivery retry policy. |
 | Bounded marketplace or collector pilot | Tests whether evidence requirements and payout tiers match a real category. | Add category-specific listing fields, caps, evidence guidance, and support procedures. | Explicit partner agreement, risk limits, incident ownership, and prior lifecycle hardening. |
@@ -114,11 +116,11 @@ Current evidence is separated from future targets.
 - **Conditions:** Reviewed state-machine specification, threat model, migration plan, and balance-invariant tests.
 - **Success:** No unreachable state, full balance reconciliation, and successful supervised confirmation, timeout, recovery, and cancellation scenarios.
 
-### Phase 3: Extend durable evidence beyond demo fixtures
+### Phase 3: Extend durable evidence beyond the demo issuer
 
-- **Problem:** Hash-pinned project fixtures are safe for the demo but cannot support open marketplace evidence.
+- **Problem:** Hash-pinned project fixtures and a deployment-wallet issuer demonstrate provenance but cannot establish independent real-world delivery facts at marketplace scale.
 - **User value:** Parties can prove exactly which listing terms and evidence were evaluated.
-- **Changes:** Keep the delivered order-policy and submission commitments, add content-addressed storage or independently signed evidence receipts, and add provider/key-rotation rules.
+- **Changes:** Keep the delivered order-specific receipt and submission commitments, add durable content-addressed storage, external provider keys, and key-rotation rules.
 - **Integrations:** Content-addressed storage, signed marketplace feeds, and evidence attestation.
 - **Conditions:** Provider selection, privacy and retention policy, content limits, and reliable validator retrieval.
 - **Success:** No verdict references mutated evidence and all supported provider-adapter tests pass.

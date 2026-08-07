@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { hexToBytes, parseEther, type Address, type Hex } from 'viem'
+import { bytesToHex, hexToBytes, parseEther, type Address, type Hex } from 'viem'
 import { abi } from 'genlayer-js'
 import { client, CONTRACT_ADDRESS } from '../config/genlayer'
 import type { UIState, OrderState } from '../types'
@@ -32,6 +32,13 @@ const getReceiptStatusName = (receipt: any): string =>
 
 const getReceiptResultName = (receipt: any): string =>
   String(receipt?.resultName ?? receipt?.result_name ?? '')
+
+const toAddressString = (value: unknown): string => {
+  if (typeof value === 'string') return value
+  if (value instanceof Uint8Array) return bytesToHex(value)
+  if (Array.isArray(value)) return bytesToHex(Uint8Array.from(value))
+  return ''
+}
 
 const formatExecutionError = (value: unknown): string => {
   if (typeof value === 'string') return value
@@ -217,6 +224,11 @@ const toOrderState = (order: any): OrderState => ({
   itemDescription: order.item_description,
   itemId: order.item_id || '',
   evidencePolicyHash: order.evidence_policy_hash || '',
+  evidenceReceiptUrl: order.evidence_receipt_url || '',
+  evidenceReceiptSha256: order.evidence_receipt_sha256 || '',
+  evidenceNonce: order.evidence_nonce || '',
+  evidenceReceiptRegisteredAt: Number(order.evidence_receipt_registered_at || 0),
+  evidenceReceiptObservedAt: Number(order.evidence_receipt_observed_at || 0),
   evidenceObservedAt: [
     Number(order.evidence_observed_at_1 || 0),
     Number(order.evidence_observed_at_2 || 0),
@@ -244,6 +256,7 @@ export const useGenDispute = () => {
   const [orderCount, setOrderCount] = useState<number | null>(null)
   const [isOrderLoading, setIsOrderLoading] = useState<boolean>(false)
   const [isRetrying, setIsRetrying] = useState<boolean>(false)
+  const [evidenceIssuer, setEvidenceIssuer] = useState<string>('')
 
   // Request network switch/add flow
   const checkAndSwitchNetwork = async () => {
@@ -315,6 +328,7 @@ export const useGenDispute = () => {
     setOrderState(null)
     setSelectedOrderId(null)
     setOrderCount(null)
+    setEvidenceIssuer('')
     setUiState('DISCONNECTED')
   }, [])
 
@@ -376,6 +390,21 @@ export const useGenDispute = () => {
       console.error('Failed to read order count:', error)
       setOrderCount(null)
       return null
+    }
+  }, [])
+
+  const refreshEvidenceIssuer = useCallback(async () => {
+    if (!CONTRACT_ADDRESS) return
+    try {
+      const issuer = await client.readContract({
+        address: CONTRACT_ADDRESS,
+        functionName: 'get_evidence_issuer',
+        args: [],
+      })
+      setEvidenceIssuer(toAddressString(issuer))
+    } catch (error) {
+      console.error('Failed to read evidence issuer:', error)
+      setEvidenceIssuer('')
     }
   }, [])
 
@@ -454,8 +483,9 @@ export const useGenDispute = () => {
   useEffect(() => {
     if (account && CONTRACT_ADDRESS) {
       refreshOrderCount()
+      refreshEvidenceIssuer()
     }
-  }, [account, refreshOrderCount])
+  }, [account, refreshEvidenceIssuer, refreshOrderCount])
 
   const createOrder = useCallback(async (
     buyerAddress: string,
@@ -580,7 +610,48 @@ export const useGenDispute = () => {
     [settleOrder]
   )
 
-  const openDispute = useCallback(async (reason: string, evidenceUrl1: string, evidenceUrl2: string = '') => {
+  const registerEvidenceReceipt = useCallback(async (
+    receiptUrl: string,
+    receiptSha256: string,
+    evidenceNonce: string,
+    observedAt: number
+  ) => {
+    if (!account || selectedOrderId === null || !CONTRACT_ADDRESS) {
+      setUiState('ERROR')
+      setErrorMessage('Connect the evidence issuer wallet and select an order first')
+      return
+    }
+    setUiState('SUBMITTING')
+    setErrorMessage('')
+    try {
+      await checkAndSwitchNetwork()
+      const hash = await client.writeContract({
+        address: CONTRACT_ADDRESS,
+        functionName: 'register_evidence_receipt',
+        args: [selectedOrderId, receiptUrl, receiptSha256, evidenceNonce, observedAt],
+        account: { address: account.address, type: 'json-rpc' },
+        value: 0n,
+      })
+      setTxHash(hash)
+      setUiState('WAITING_FOR_CONSENSUS')
+      const finalized = await waitForAcceptedAndFinalized(hash, async () => {
+        setUiState('ACCEPTED')
+        await refreshOrder()
+      })
+      const updated = await readOrder(selectedOrderId)
+      setOrderState(updated)
+      if (updated.evidenceReceiptSha256 !== receiptSha256) {
+        throw new Error('Receipt registration finalized but contract state does not match')
+      }
+      setUiState(finalized ? 'FINALIZED' : 'ACCEPTED')
+      if (!finalized) setErrorMessage(FINALIZATION_PENDING_MESSAGE)
+    } catch (e: any) {
+      setUiState('ERROR')
+      setErrorMessage(e.message || 'Receipt registration failed')
+    }
+  }, [account, readOrder, refreshOrder, selectedOrderId])
+
+  const openDispute = useCallback(async (reason: string) => {
     if (!account) {
       setUiState('ERROR')
       setErrorMessage('Wallet not connected')
@@ -606,7 +677,7 @@ export const useGenDispute = () => {
       const hash = await client.writeContract({
         address: CONTRACT_ADDRESS,
         functionName: 'open_dispute',
-        args: [selectedOrderId, reason, evidenceUrl1, evidenceUrl2],
+        args: [selectedOrderId, reason],
         account: { address: account.address, type: 'json-rpc' },
         value: 0n,
       })
@@ -660,11 +731,13 @@ export const useGenDispute = () => {
     orderState,
     selectedOrderId,
     orderCount,
+    evidenceIssuer,
     isOrderLoading,
     connectWallet,
     disconnectWallet,
     createOrder,
     openDispute,
+    registerEvidenceReceipt,
     confirmDelivery,
     recoverExpiredOrder,
     loadOrder,

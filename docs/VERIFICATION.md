@@ -6,10 +6,10 @@
 | --- | --- |
 | Project | GenDispute |
 | Submission category | Project |
-| Prior anonymous-reviewed commit | `d30ea42c01b922889642da93fa209ff887ee5161` (`CHANGES REQUIRED`) |
-| Prior reviewed contract SHA-256 | `d240e8da50f1e8f1d1660deb8881ff585211ec22ed214909cdca0dcfbceadb0c` |
+| Prior anonymous-reviewed commit | `f3e81b81221b7ae7b04bb5bbcbbb4c9bd3d86c58` (`CHANGES REQUIRED`) |
+| Prior reviewed contract SHA-256 | `78d7d013ddc747a9776468ee01194744d2d86363e0c18f8dd4a58c2ae8604515` |
 | Exact reviewed revision | Supplied by `git rev-parse HEAD` in each checkpoint package; it is not self-embedded because editing this file changes the commit hash. |
-| Contract source SHA-256 | `78d7d013ddc747a9776468ee01194744d2d86363e0c18f8dd4a58c2ae8604515` |
+| Contract source SHA-256 | `9b1cece7f2feb3af52817bce8e0be62d02f5e493da1671557fa6269faca35a23` |
 | Network | GenLayer Studionet, chain ID `61999` |
 | Deployment classification | Upgradable through GenLayer Root Slot |
 | Selected deployer/upgrader | `0xbf90af1bc61314775d57b641b89c1f702a93b40d` |
@@ -23,7 +23,7 @@ The release candidate is locally verified but not yet deployed. The submitted V1
 | --- | --- |
 | Consume the ID returned by `create_order` | `useGenDispute.ts` reads `debugTraceTransaction({ round: 0 })`, decodes `return_data` through `abi.calldata.decode`, and loads that exact order. |
 | Cover concurrent order creation | The frontend regression sets the global count to `12` while `create_order` returns ID `7`, then proves the UI loads order `7`. The count is display-only. |
-| Bind immutable evidence to each order | `create_order` freezes an exact policy containing `order_id`-specific HTTPS URLs, canonical item ID, source validity windows, publisher ID, and expected body SHA-256 values. Leader and validators independently enforce that policy, and each attempt stores observation time, exact byte and attestation hashes, plus a canonical submission commitment. |
+| Bind authenticated evidence to each order | The deployment wallet is the evidence issuer and signs `register_evidence_receipt`, binding one trusted-origin URL, SHA-256, observation time, and globally unique nonce to one order. The contract forbids the issuer from being buyer or seller. Receipt attestations must match the exact order ID, canonical item ID, publisher ID, and nonce. Each attempt retains its own URL, byte hash, observation time, attestation hash, and canonical commitment. |
 | Add normal release | The named buyer can call `confirm_delivery`; the contract records `BUYER_CONFIRMED` and releases the full escrow to the seller. |
 | Add locked-fund recovery | Every order has a bounded deadline. After expiry, the buyer or seller can call `recover_expired_order` for `OPEN` or `UNDETERMINED` state; the seller-funded escrow returns to the seller. |
 
@@ -31,7 +31,8 @@ The release candidate is locally verified but not yet deployed. The submitted V1
 
 | Prior blocker | Corrected design | Regression evidence |
 | --- | --- | --- |
-| Evidence was not authenticated or order-specific | Arbitrary and wrong-order URLs are rejected. Every order freezes an order-ID-bound source policy before a dispute. Attestations must match the registered publisher, canonical item, evidence set, and validity window; unknown publisher, wrong item, stale, duplicate, and conflicting sources fail closed as `UNDETERMINED` with zero payout. The demo publisher is policy-registered and byte-hash-pinned, but not represented as an externally certified real-world identity. | Contract tests cover wrong order, unknown source/publisher, wrong item, stale source, conflicting source sets, mutated bytes, valid immutable evidence, and all three payout tiers. |
+| Buyer could select a reusable payout fixture | The buyer no longer supplies evidence URLs and the frontend contains no Match/Partial/Mismatch controls. Only the issuer address can register a receipt. Its signed transaction binds order ID, item policy, observation time, nonce, URL, and SHA-256. Nonces are globally single-use; a URL query does not alter the body subject; retries require a newly registered receipt. Missing or wrongly bound evidence remains `UNDETERMINED` with zero payout. | Tests create two same-item orders and prove order-0 evidence cannot settle order 1, query suffixes add no provenance, buyers cannot register mismatch evidence or choose a tier, nonces cannot replay, invalid observation times fail, and only issuer-registered order-specific evidence settles. |
+| Publisher authentication was missing | The contract authenticates the publisher through the GenLayer transaction signer returned by `get_evidence_issuer`. The constructor registers the deployment wallet as issuer and Root Slot upgrader, while order creation rejects that address as either trading party. The bounded receipt also carries the matching publisher ID. | Tests cover issuer-only registration, issuer/party separation, publisher-ID mismatch, SHA-256 mismatch, and authorized issuer readback. |
 | Untrusted web and prompt inputs lacked deterministic safeguards | Reason and URL lengths are bounded. HTTP status, content type, body size, UTF-8, attestation shape, facts, and exact body hash are checked before evaluation. Raw HTML, seller description, and buyer reason are excluded from the LLM prompt; only canonical JSON containing the frozen listing and validated attestation facts enters `exec_prompt`. | Contract tests cover 4xx/5xx, unsupported content, oversized bodies, invalid UTF-8, missing attestation, hostile instruction pages, hostile buyer reason, and validators agreeing with an injected unsupported verdict. All fail closed without transfer. |
 
 ## Local verification
@@ -52,7 +53,7 @@ git diff --check
 Results:
 
 - Contract: `47 passed`.
-- GenVM: lint passed, validation passed, 8 public methods detected.
+- GenVM: lint passed, validation passed, 10 public methods detected.
 - Frontend: `36 passed` across 4 test files.
 - Oxlint: zero errors.
 - TypeScript and Vite production build: passed.
@@ -66,8 +67,8 @@ Contract tests use an isolated WSL environment with `genlayer-test==0.29.2`. Web
 
 - positive escrow, buyer/seller separation, registered listing, and snapshot validation;
 - independent leader and validator evidence retrieval and semantic evaluation;
-- frozen order/item/source/time/body-hash policy plus exact evidence-byte and attestation-hash agreement;
-- wrong-order, unknown-publisher, wrong-item, stale, conflicting, malformed, changed, and injection-style evidence paths;
+- issuer-signed order/item/time/nonce/body-hash binding plus exact evidence-byte and attestation-hash agreement;
+- cross-order replay, query-suffix replay, unauthorized issuer, issuer-as-party, unknown-publisher, wrong-item, stale, malformed, changed, and injection-style evidence paths;
 - HTTP error, unsupported content type, oversized body, invalid UTF-8, missing attestation, and hostile reason paths;
 - 0%, 50%, and 100% conservation and transfer targets;
 - buyer-only dispute and confirmation authorization;
@@ -82,11 +83,11 @@ Contract tests use an isolated WSL environment with `genlayer-test==0.29.2`. Web
 - exact `create_order` return decoding under a simulated concurrent count race;
 - accepted, finalized, majority-disagree, undetermined, execution-error, and finalization-timeout handling;
 - normal buyer release and expired recovery writes;
-- listing- and order-aware immutable evidence presets, arbitrary-source rejection, and reviewer-facing `/docs` content.
+- buyer reason-only dispute UI with no outcome/evidence selectors, issuer receipt registration, and reviewer-facing `/docs` content.
 
 ## Deployment and recovery gate
 
-The user selected and confirmed the external deployment wallet `0xbf90af1bc61314775d57b641b89c1f702a93b40d`. The replacement deployment remains blocked until the anonymous co-review AI returns `APPROVED` for the exact `PRE_DEPLOY` revision and evidence package. At deployment, the selected wallet must send the deployment transaction, be registered by the constructor, and be independently read back through `get_upgrader()`.
+The user selected and confirmed the external deployment wallet `0xbf90af1bc61314775d57b641b89c1f702a93b40d`. The replacement deployment remains blocked until the anonymous co-review AI returns `APPROVED` for the exact `PRE_DEPLOY` revision and evidence package. At deployment, the selected wallet must send the deployment transaction, become both upgrader and evidence issuer, and be independently read back through `get_upgrader()` and `get_evidence_issuer()`.
 
 ### Draft deployment manifest
 
@@ -97,10 +98,10 @@ The user selected and confirmed the external deployment wallet `0xbf90af1bc61314
 | RPC | `https://studio.genlayer.com/api` |
 | Contract source | `contracts/gen_dispute.py` |
 | Exact source revision | Supplied by `git rev-parse HEAD` in the approved deployment package |
-| Source SHA-256 | `78d7d013ddc747a9776468ee01194744d2d86363e0c18f8dd4a58c2ae8604515` |
+| Source SHA-256 | `9b1cece7f2feb3af52817bce8e0be62d02f5e493da1671557fa6269faca35a23` |
 | Constructor arguments | None (`__init__(self)`) |
 | Deployment classification | `UPGRADABLE` |
-| Deployer/upgrader | `0xbf90af1bc61314775d57b641b89c1f702a93b40d` |
+| Deployer/upgrader/evidence issuer | `0xbf90af1bc61314775d57b641b89c1f702a93b40d` |
 | Linked contracts | None |
 | Frontend address update | Blocked until post-deployment acceptance and live smoke verification |
 
@@ -115,7 +116,7 @@ The final manifest must add the actual deployment address, Explorer link, deploy
 Before the replacement can be accepted:
 
 1. deploy the exact contract source above on Studionet;
-2. verify deployment `FINALIZED`, execution `SUCCESS`, Explorer source parity, and upgrader readback;
+2. verify deployment `FINALIZED`, execution `SUCCESS`, Explorer source parity, upgrader readback, and evidence-issuer readback;
 3. rehearse authorized upgrade and unauthorized rejection on a separate throwaway deployment;
 4. prove exact-ID order creation, buyer confirmation, evidence-bound dispute settlement, and expiry recovery with transaction receipts and state readback;
 5. update the frontend environment to the verified replacement address and verify the live application;

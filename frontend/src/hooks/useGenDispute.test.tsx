@@ -510,13 +510,13 @@ describe('useGenDispute Hook', () => {
       })
 
       await act(async () => {
-        await result.current.openDispute('reason', 'https://evidence')
+        await result.current.openDispute('reason')
       })
 
       expect(mockWriteContract).toHaveBeenCalledWith({
         address: '0xcontractaddress',
         functionName: 'open_dispute',
-        args: [0, 'reason', 'https://evidence', ''],
+        args: [0, 'reason'],
         value: 0n,
         account: { address: '0x1122334455667788990011223344556677889900', type: 'json-rpc' },
       })
@@ -579,7 +579,7 @@ describe('useGenDispute Hook', () => {
       })
 
       await act(async () => {
-        await result.current.openDispute('reason', 'https://evidence')
+        await result.current.openDispute('reason')
       })
 
       expect(result.current.uiState).toBe('PAID_OUT')
@@ -609,7 +609,7 @@ describe('useGenDispute Hook', () => {
       })
 
       await act(async () => {
-        await result.current.openDispute('reason', 'https://evidence')
+        await result.current.openDispute('reason')
       })
 
       expect(result.current.uiState).toBe('UNDETERMINED')
@@ -634,7 +634,7 @@ describe('useGenDispute Hook', () => {
       })
 
       await act(async () => {
-        await result.current.openDispute('reason', 'https://evidence')
+        await result.current.openDispute('reason')
       })
 
       expect(result.current.uiState).toBe('ERROR')
@@ -677,6 +677,55 @@ describe('useGenDispute Hook', () => {
       })
       expect(result.current.uiState).toBe('PAID_OUT')
       expect(result.current.orderState?.status).toBe('PAID_OUT')
+    })
+  })
+
+  it('registers an issuer-signed order receipt with all provenance fields', async () => {
+    const receiptHash = 'a'.repeat(64)
+    ;(window as any).ethereum.request.mockImplementation(async ({ method }: any) => {
+      if (method === 'eth_chainId') return '0xf22f'
+      if (method === 'eth_requestAccounts') return ['0x1122334455667788990011223344556677889900']
+      return null
+    })
+    vi.mocked(client.writeContract).mockResolvedValue('0xreceipt')
+    vi.mocked(client.waitForTransactionReceipt).mockResolvedValue(successfulReceipt() as any)
+    vi.mocked(client.readContract).mockImplementation(async ({ functionName }: any) => {
+      if (functionName === 'get_order_count') return 1
+      if (functionName === 'get_evidence_issuer') return '0x1122334455667788990011223344556677889900'
+      return {
+        ...contractOrder(),
+        evidence_receipt_url: 'https://gen-dispute.vercel.app/fixtures/order-0.html',
+        evidence_receipt_sha256: receiptHash,
+        evidence_nonce: 'ORDER_0_V1',
+        evidence_receipt_observed_at: 1786147200,
+      }
+    })
+
+    const { result } = renderHook(() => useGenDispute())
+    await act(async () => result.current.connectWallet())
+    await act(async () => result.current.loadOrder(0))
+    await act(async () => result.current.registerEvidenceReceipt(
+      'https://gen-dispute.vercel.app/fixtures/order-0.html',
+      receiptHash,
+      'ORDER_0_V1',
+      1786147200
+    ))
+
+    expect(client.writeContract).toHaveBeenCalledWith({
+      address: '0xcontractaddress',
+      functionName: 'register_evidence_receipt',
+      args: [
+        0,
+        'https://gen-dispute.vercel.app/fixtures/order-0.html',
+        receiptHash,
+        'ORDER_0_V1',
+        1786147200,
+      ],
+      value: 0n,
+      account: {
+        address: '0x1122334455667788990011223344556677889900',
+        type: 'json-rpc',
+      },
     })
   })
 })
