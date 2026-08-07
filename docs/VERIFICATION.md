@@ -6,10 +6,13 @@
 | --- | --- |
 | Project | GenDispute |
 | Submission category | Project |
-| Contract source commit | `e2147fde7975e37cd8620a6c60f4a60e917e077d` |
+| Contract source-origin commit | `e2147fde7975e37cd8620a6c60f4a60e917e077d` |
+| Pre-deploy evidence baseline commit | `6ab106be3d9438f83e48f1cd273ff30c954f62af` |
+| Exact reviewed revision | Supplied by `git rev-parse HEAD` in each checkpoint package; it is not self-embedded because editing this file changes the commit hash. |
 | Contract source SHA-256 | `d240e8da50f1e8f1d1660deb8881ff585211ec22ed214909cdca0dcfbceadb0c` |
 | Network | GenLayer Studionet, chain ID `61999` |
 | Deployment classification | Upgradable through GenLayer Root Slot |
+| Selected deployer/upgrader | `0xbf90af1bc61314775d57b641b89c1f702a93b40d` |
 | Local gate audit | `PASS` |
 
 The release candidate is locally verified but not yet deployed. The submitted V1 contract at `0x1E877E7B333D5371a75d2EF995763bcdabaeB9cE` is frozen and does not contain this remediation source. It remains historical evidence only.
@@ -75,7 +78,31 @@ Contract tests use an isolated WSL environment with `genlayer-test==0.29.2`. Web
 
 ## Deployment and recovery gate
 
-The replacement deployment remains blocked until the user selects and confirms a user-controlled external deployment wallet. At deployment, that wallet must be registered by the constructor and independently read back through `get_upgrader()`.
+The user selected and confirmed the external deployment wallet `0xbf90af1bc61314775d57b641b89c1f702a93b40d`. The replacement deployment remains blocked until the anonymous co-review AI returns `APPROVED` for the exact `PRE_DEPLOY` revision and evidence package. At deployment, the selected wallet must send the deployment transaction, be registered by the constructor, and be independently read back through `get_upgrader()`.
+
+### Draft deployment manifest
+
+| Field | Intended value |
+| --- | --- |
+| Network | GenLayer Studionet |
+| Chain ID | `61999` |
+| RPC | `https://studio.genlayer.com/api` |
+| Contract source | `contracts/gen_dispute.py` |
+| Source-origin commit | `e2147fde7975e37cd8620a6c60f4a60e917e077d` |
+| Source SHA-256 | `d240e8da50f1e8f1d1660deb8881ff585211ec22ed214909cdca0dcfbceadb0c` |
+| Constructor arguments | None (`__init__(self)`) |
+| Deployment classification | `UPGRADABLE` |
+| Deployer/upgrader | `0xbf90af1bc61314775d57b641b89c1f702a93b40d` |
+| Linked contracts | None |
+| Frontend address update | Blocked until post-deployment acceptance and live smoke verification |
+
+The final manifest must add the actual deployment address, Explorer link, deployment transaction, deployed-source readback, final exact revision, and any post-deployment verification transactions.
+
+### Recovery runbooks
+
+**Studio/local UI reset while Studionet state remains:** reconnect the selected upgrader wallet, import the contract by its recorded address, load the exact source identified by the recorded commit and SHA-256, call `get_upgrader()`, and compare the returned address with the manifest before any upgrade or write.
+
+**Studionet/network-state reset:** treat the prior address and state as unrecoverable. Redeploy the exact recorded source with no constructor arguments from the selected wallet, verify `FINALIZED`, execution `SUCCESS`, deployed-source parity, and `get_upgrader()` readback, rerun the full live proof matrix, then update the frontend address and all deployment documentation. Do not present the previous address as current evidence.
 
 Before the replacement can be accepted:
 
