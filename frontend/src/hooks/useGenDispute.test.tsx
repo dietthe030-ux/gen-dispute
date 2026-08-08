@@ -15,7 +15,7 @@ vi.mock('../config/genlayer', () => {
       writeContract: vi.fn(),
       readContract: vi.fn(),
       waitForTransactionReceipt: vi.fn(),
-      debugTraceTransaction: vi.fn(),
+      getTransaction: vi.fn(),
     },
     setWalletProvider: vi.fn(),
   }
@@ -69,7 +69,9 @@ const contractOrder = (status: 'OPEN' | 'PAID_OUT' | 'UNDETERMINED' = 'OPEN') =>
 describe('useGenDispute Hook', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(client.debugTraceTransaction).mockResolvedValue({ return_data: '0x01' } as any)
+    vi.mocked(client.getTransaction).mockResolvedValue({
+      consensus_data: { leader_receipt: [{ result: { payload: { raw: [9] } } }] },
+    } as any)
     ;(window as any).ethereum = {
       request: vi.fn(),
       on: vi.fn(),
@@ -356,7 +358,9 @@ describe('useGenDispute Hook', () => {
     it('uses the returned order ID when concurrent creation changes the global count', async () => {
       vi.mocked(client.writeContract).mockResolvedValue('0xconcurrent')
       vi.mocked(client.waitForTransactionReceipt).mockResolvedValue(successfulReceipt() as any)
-      vi.mocked(client.debugTraceTransaction).mockResolvedValue({ return_data: '0x39' } as any)
+      vi.mocked(client.getTransaction).mockResolvedValue({
+        consensus_data: { leader_receipt: [{ result: { payload: { raw: [57] } } }] },
+      } as any)
       vi.mocked(client.readContract).mockImplementation(async ({ functionName, args }: any) => {
         if (functionName === 'get_order_count') return 12
         return { ...contractOrder(), order_id: args[0] }

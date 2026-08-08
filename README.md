@@ -34,7 +34,7 @@ A verdict is accepted only when provenance, body-hash, schema, and internal-cons
 
 1. Connect a wallet on Studionet.
 2. Name the buyer, select a registered fixture listing, choose a timeout, and deposit native GEN through `create_order`.
-3. The frontend decodes the exact returned order ID from the GenVM trace. The global count is display-only and is never used to infer the created order.
+3. The frontend decodes the exact returned order ID from the accepted transaction's leader result payload. The global count is display-only and is never used to infer the created order.
 4. Wait for buyer confirmation, a dispute verdict, or deadline recovery.
 
 ### Buyer
@@ -95,7 +95,7 @@ For every write, the frontend:
 2. asks the wallet to sign and submits `client.writeContract`;
 3. displays submission and consensus-pending states;
 4. waits for `ACCEPTED` and checks consensus plus the leader and agreeing validators' GenVM execution results;
-5. decodes `create_order` return data through `debugTraceTransaction` and `abi.calldata.decode`, when applicable;
+5. reads `create_order` return data from `getTransaction().consensus_data.leader_receipt` and decodes the leader payload through `abi.calldata.decode`, when applicable;
 6. reads the affected order directly from the contract;
 7. waits for `FINALIZED`, checks execution `SUCCESS` again, and reconciles state; and
 8. keeps a timed-out finalization visible as accepted/pending rather than reporting false success.

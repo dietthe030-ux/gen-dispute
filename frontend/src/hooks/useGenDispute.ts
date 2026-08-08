@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { bytesToHex, hexToBytes, parseEther, type Address, type Hex } from 'viem'
+import { bytesToHex, parseEther, type Address } from 'viem'
 import { abi } from 'genlayer-js'
 import { client, CONTRACT_ADDRESS, setWalletProvider } from '../config/genlayer'
 import type { UIState, OrderState } from '../types'
@@ -183,12 +183,15 @@ const waitForAcceptedAndFinalized = async (
 export const decodeCreatedOrderId = async (
   hash: Awaited<ReturnType<typeof client.writeContract>>
 ): Promise<number> => {
-  const trace = await client.debugTraceTransaction({ hash, round: 0 })
-  if (!trace?.return_data || !String(trace.return_data).startsWith('0x')) {
+  const transaction = await client.getTransaction({ hash }) as any
+  const leaderReceipts = transaction?.consensus_data?.leader_receipt
+  const receipt = Array.isArray(leaderReceipts) ? leaderReceipts[0] : leaderReceipts
+  const raw = receipt?.result?.payload?.raw
+  if (!raw || (!Array.isArray(raw) && !(raw instanceof Uint8Array))) {
     throw new Error('create_order did not return a decodable order ID')
   }
 
-  const decoded = abi.calldata.decode(hexToBytes(trace.return_data as Hex))
+  const decoded = abi.calldata.decode(Uint8Array.from(raw))
   const orderId = typeof decoded === 'bigint' ? Number(decoded) : Number(decoded)
   if (!Number.isSafeInteger(orderId) || orderId < 0) {
     throw new Error('create_order returned an invalid order ID')

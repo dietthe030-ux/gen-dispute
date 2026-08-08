@@ -24,7 +24,7 @@ The release candidate is deployed on Studionet. The deployment is `FINALIZED`, h
 
 | Request | Implemented evidence |
 | --- | --- |
-| Consume the ID returned by `create_order` | `useGenDispute.ts` reads `debugTraceTransaction({ round: 0 })`, decodes `return_data` through `abi.calldata.decode`, and loads that exact order. |
+| Consume the ID returned by `create_order` | `useGenDispute.ts` reads the accepted transaction through `getTransaction`, decodes `consensus_data.leader_receipt[0].result.payload.raw` through `abi.calldata.decode`, and loads that exact order without relying on a debug RPC. |
 | Cover concurrent order creation | The frontend regression sets the global count to `12` while `create_order` returns ID `7`, then proves the UI loads order `7`. The count is display-only. |
 | Bind authenticated evidence to each order | The deployment wallet is the evidence issuer and signs `register_evidence_receipt`, binding one trusted-origin URL, SHA-256, observation time, and globally unique nonce to one order. The contract forbids the issuer from being buyer or seller. Receipt attestations must match the exact order ID, canonical item ID, publisher ID, and nonce. Each attempt retains its own URL, byte hash, observation time, attestation hash, and canonical commitment. |
 | Add normal release | The named buyer can call `confirm_delivery`; the contract records `BUYER_CONFIRMED` and releases the full escrow to the seller. |
