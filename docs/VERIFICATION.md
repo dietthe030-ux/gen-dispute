@@ -6,12 +6,13 @@
 | --- | --- |
 | Project | GenDispute |
 | Submission category | Project |
-| Prior anonymous-reviewed commit | `d611d84f17bff187beecb1dc0dc0f6c65915d1e5` (`CHANGES REQUIRED`) |
+| Prior anonymous-reviewed commit | `320774400a3d1af9377ce8a300e1e2573a2c430b` (`CHANGES REQUIRED`) |
 | Prior reviewed contract SHA-256 | `22d16b89b97f9570107adc76fe7d9f212641a7b04b0611d1b872bf47911cb6ed` |
 | Approved PRE_DEPLOY commit | `a350de3db6fea88918cb55110225e9cb9f90b6d1` (`APPROVED`) |
 | Exact reviewed revision | Supplied by `git rev-parse HEAD` in each checkpoint package; it is not self-embedded because editing this file changes the commit hash. |
 | Current candidate source SHA-256 | `22d16b89b97f9570107adc76fe7d9f212641a7b04b0611d1b872bf47911cb6ed` |
 | Current candidate deployment status | Not deployed; fresh deployment or authorized upgrade required |
+| Public `main` revision | `29a218fe03808994ac66287620374b1d1f32f3cf` (prior source; candidate not pushed) |
 | Prior deployed source SHA-256 | `9b1cece7f2feb3af52817bce8e0be62d02f5e493da1671557fa6269faca35a23` |
 | Network | GenLayer Studionet, chain ID `61999` |
 | Deployment classification | Upgradable through GenLayer Root Slot |

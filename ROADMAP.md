@@ -1,6 +1,6 @@
 # Project Roadmap
 
-This roadmap reflects source, local verification, and the replacement Studionet deployment reviewed on August 8, 2026. It claims no users, traction, or partnerships. The three live settlement paths are verified; final exact-revision review of the matching public frontend release remains in progress.
+This roadmap reflects the local candidate and historical evidence from the prior Studionet deployment reviewed on August 8, 2026. It claims no users, traction, or partnerships. Historical live evidence verifies 0% and 100% dispute outcomes, buyer-confirmed release, and expired recovery on the prior deployment. A successful 50% settlement, candidate deployment, and matching public frontend remain pending.
 
 ## V1 Delivered
 
@@ -29,10 +29,10 @@ The remediation build includes:
 
 | Area | Evidence |
 | --- | --- |
-| Public source | [dietthe030-ux/gen-dispute](https://github.com/dietthe030-ux/gen-dispute) contains the reviewed contract, frontend, tests, and documentation. |
+| Public source | Public `main` at [dietthe030-ux/gen-dispute](https://github.com/dietthe030-ux/gen-dispute) is the prior revision `29a218fe03808994ac66287620374b1d1f32f3cf`. The current candidate is local and has not been pushed. |
 | Local contract verification | 48/48 tests pass, including the live-shaped `PARTIAL_MISMATCH + included_items: UNKNOWN` validator regression as well as issuer authorization, replay rejection, evidence binding, settlement, recovery, and Root Slot authorization. |
 | Local frontend verification | 46/46 tests pass, including explicit provider selection, same-origin Studionet RPC retries, rate-limit preservation, order-scoped transaction attribution, terminal-state reconciliation after transient RPC polling failure, settled-order action messaging, concurrent returned-order decoding, mandatory reconnect signatures, live-shaped post-quorum receipt handling, issuer-registration calldata, and proof that the buyer UI exposes neither outcome presets nor evidence URL inputs; Oxlint, TypeScript compilation, and the Vite production build pass. |
-| Current public release | [gen-dispute.vercel.app](https://gen-dispute.vercel.app) targets the replacement contract and exposes the remediation frontend. The older [`0x1E877E7B333D5371a75d2EF995763bcdabaeB9cE`](https://explorer-studio.genlayer.com/address/0x1E877E7B333D5371a75d2EF995763bcdabaeB9cE) deployment remains historical V1 evidence only. |
+| Prior public release | [gen-dispute.vercel.app](https://gen-dispute.vercel.app) targets the prior replacement contract and does not publish the current candidate. The older [`0x1E877E7B333D5371a75d2EF995763bcdabaeB9cE`](https://explorer-studio.genlayer.com/address/0x1E877E7B333D5371a75d2EF995763bcdabaeB9cE) deployment remains historical V1 evidence only. |
 | Current live deployment | [`0xd5DBaE8c1A1B2A8F34dba3e4AdC62f9263EaB53d`](https://explorer-studio.genlayer.com/address/0xd5DBaE8c1A1B2A8F34dba3e4AdC62f9263EaB53d) remains the frontend target and preserves the prior live proofs. It predates the current validator-compatibility fix and is not evidence of the new source until a fresh deployment or authorized upgrade passes source-parity and live checks. |
 
 ### Current limitations

@@ -8,9 +8,9 @@ GenDispute is a seller-funded GEN escrow prototype for item-not-as-described tra
 
 | Item | Link | Current status |
 | --- | --- | --- |
-| Web application | [gen-dispute.vercel.app](https://gen-dispute.vercel.app) | Production remediation frontend at `/` with reviewer documentation at `/docs` |
-| Current live contract | [`0xd5DBaE8c1A1B2A8F34dba3e4AdC62f9263EaB53d`](https://explorer-studio.genlayer.com/address/0xd5DBaE8c1A1B2A8F34dba3e4AdC62f9263EaB53d) | Previous reviewed revision; the validator-compatibility fix in the current source requires a fresh deployment or authorized upgrade before the frontend can use it |
-| Source repository | [dietthe030-ux/gen-dispute](https://github.com/dietthe030-ux/gen-dispute) | Public source for the current release |
+| Web application | [gen-dispute.vercel.app](https://gen-dispute.vercel.app) | Public frontend for the prior deployed revision; the current candidate is not published |
+| Prior live contract | [`0xd5DBaE8c1A1B2A8F34dba3e4AdC62f9263EaB53d`](https://explorer-studio.genlayer.com/address/0xd5DBaE8c1A1B2A8F34dba3e4AdC62f9263EaB53d) | Previous reviewed revision; the validator-compatibility fix in the current source requires a fresh deployment or authorized upgrade before the frontend can use it |
+| Source repository | [dietthe030-ux/gen-dispute](https://github.com/dietthe030-ux/gen-dispute) | Public `main` is the prior revision at `29a218fe03808994ac66287620374b1d1f32f3cf`; the current candidate is local and not yet pushed |
 | Verification record | [docs/VERIFICATION.md](docs/VERIFICATION.md) | Local remediation evidence and deployment gate status |
 | Network | GenLayer Studionet, chain ID `61999` | RPC `https://studio.genlayer.com/api` |
 
