@@ -481,7 +481,16 @@ export const useGenDispute = () => {
     const orderId = orderIdOverride ?? selectedOrderId
     if (!CONTRACT_ADDRESS || orderId === null) return
     try {
-      setOrderState(await readOrder(orderId))
+      const order = await readOrder(orderId)
+      setOrderState(order)
+      if (order.status === 'PAID_OUT' || order.status === 'RESOLVED') {
+        setErrorMessage('')
+        setUiState('PAID_OUT')
+      } else if (order.status === 'UNDETERMINED') {
+        setErrorMessage('')
+        setUiState('UNDETERMINED')
+      }
+      return order
     } catch (e: any) {
       console.error('Failed to read contract state:', e)
       if (orderIdOverride !== undefined) throw e
@@ -655,6 +664,12 @@ export const useGenDispute = () => {
         setErrorMessage(FINALIZATION_PENDING_MESSAGE)
       }
     } catch (e: any) {
+      const reconciledOrder = await refreshOrder()
+      if (
+        reconciledOrder?.status === 'PAID_OUT' ||
+        reconciledOrder?.status === 'RESOLVED' ||
+        reconciledOrder?.status === 'UNDETERMINED'
+      ) return
       setUiState('ERROR')
       setErrorMessage(e.message || 'Transaction failed')
     }
@@ -778,6 +793,12 @@ export const useGenDispute = () => {
         setErrorMessage(order.last_error || 'Dispute resolution failed')
       }
     } catch (e: any) {
+      const reconciledOrder = await refreshOrder()
+      if (
+        reconciledOrder?.status === 'PAID_OUT' ||
+        reconciledOrder?.status === 'RESOLVED' ||
+        reconciledOrder?.status === 'UNDETERMINED'
+      ) return
       setUiState('ERROR')
       setErrorMessage(e.message || 'Transaction failed')
     }

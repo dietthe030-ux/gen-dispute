@@ -602,6 +602,29 @@ describe('useGenDispute Hook', () => {
       expect(result.current.uiState).toBe('PAID_OUT')
     })
 
+    it('uses terminal contract state when receipt polling fails after submission', async () => {
+      vi.mocked(client.writeContract).mockResolvedValue('0xtxhash')
+      vi.mocked(client.waitForTransactionReceipt).mockRejectedValue(
+        new Error('An unknown RPC error occurred. Details: Failed to fetch')
+      )
+
+      let orderReads = 0
+      vi.mocked(client.readContract).mockImplementation(async ({ functionName }: any) => {
+        if (functionName === 'get_order_count') return 1
+        if (functionName === 'get_evidence_issuer') return '0xissuer'
+        return contractOrder(orderReads++ === 0 ? 'OPEN' : 'PAID_OUT')
+      })
+
+      const { result } = renderHook(() => useGenDispute())
+      await act(async () => result.current.connectWallet())
+      await act(async () => result.current.loadOrder(0))
+      await act(async () => result.current.openDispute('reason'))
+
+      expect(result.current.orderState?.status).toBe('PAID_OUT')
+      expect(result.current.uiState).toBe('PAID_OUT')
+      expect(result.current.errorMessage).toBe('')
+    })
+
     it('ignores validators cancelled after an accepted quorum is reached', async () => {
       const mockWriteContract = vi.mocked(client.writeContract)
       mockWriteContract.mockResolvedValue('0xtxhash')

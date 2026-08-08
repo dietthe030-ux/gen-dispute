@@ -141,7 +141,7 @@ npm run build
 Current local results:
 
 - 47 contract tests passed, including cross-order replay rejection, issuer-only registration, buyer outcome-selection rejection, observation-window validation, and mandatory fresh evidence for retry.
-- 40 frontend tests passed, including explicit injected-wallet selection, exact returned-ID handling, issuer-registration calldata, and proof that the buyer UI exposes neither outcome presets nor evidence URL inputs.
+- 41 frontend tests passed, including explicit injected-wallet selection, terminal-state reconciliation after a transient RPC polling failure, exact returned-ID handling, issuer-registration calldata, and proof that the buyer UI exposes neither outcome presets nor evidence URL inputs.
 - GenVM lint and validation passed.
 - Oxlint, TypeScript compilation, and the Vite production build passed.
 - The production build reports a non-blocking large-chunk warning.
@@ -152,7 +152,7 @@ Local tests mock web, model, wallet, and SDK behavior. They are regression evide
 
 `frontend/.env.example` contains no address. The live frontend is configured for the verified Studionet replacement contract `0xd5DBaE8c1A1B2A8F34dba3e4AdC62f9263EaB53d`; its deployment finalized successfully and the selected external wallet was read back as both upgrader and evidence issuer.
 
-The submitted V1 [deployment](https://explorer-studio.genlayer.com/tx/0x7ebe17a1815e77ffcd2e6f3587693dfd3a44e7ff475f9a05ebb90fe5e19ceab8), [order creation](https://explorer-studio.genlayer.com/tx/0x6e066962310c5736670c6a20170cc61b8b81b3065e859ef78356114c33056e7f), [material-mismatch dispute](https://explorer-studio.genlayer.com/tx/0x43f8916eace1c93da67ac8fe4173e85ab55e945feafd0bde094a73fcb8695e9d), and [buyer transfer](https://explorer-studio.genlayer.com/tx/0x312f9bba5a7a0663a75da2fc46a1f41924b9416fc855c164b939d6c4e200d69a) remain historical evidence only. The replacement deployment has new proof for exact-ID order creation and issuer-signed evidence registration; normal release, a finalized dispute, and expiry recovery still require supervised proof.
+The submitted V1 [deployment](https://explorer-studio.genlayer.com/tx/0x7ebe17a1815e77ffcd2e6f3587693dfd3a44e7ff475f9a05ebb90fe5e19ceab8), [order creation](https://explorer-studio.genlayer.com/tx/0x6e066962310c5736670c6a20170cc61b8b81b3065e859ef78356114c33056e7f), [material-mismatch dispute](https://explorer-studio.genlayer.com/tx/0x43f8916eace1c93da67ac8fe4173e85ab55e945feafd0bde094a73fcb8695e9d), and [buyer transfer](https://explorer-studio.genlayer.com/tx/0x312f9bba5a7a0663a75da2fc46a1f41924b9416fc855c164b939d6c4e200d69a) remain historical evidence only. The replacement deployment now has proof for exact-ID order creation, issuer-signed evidence registration, and a finalized 100% material-mismatch refund. Normal release and expiry recovery still require supervised proof.
 
 The contract is classified as upgradable through GenLayer Root Slot. Any upgrade requires the registered external wallet, a non-empty source payload, local regression verification, an isolated rehearsal deployment, deployed-source parity checks, and fresh exact-revision review.
 
@@ -171,8 +171,8 @@ The contract is classified as upgradable through GenLayer Root Slot. Any upgrade
 - The repository ships demonstration receipts only for order `0`; another order requires the issuer to publish a new receipt with that exact order ID and nonce before registration.
 - There is no mutual cancellation path.
 - Evidence bytes are content-addressed by SHA-256 but are not stored in a durable decentralized storage network and may later disappear from their URLs.
-- Live remediation evidence currently covers replacement deployment, exact-ID order creation, and issuer-signed evidence registration; normal release, expiry recovery, and a finalized replacement-contract dispute still require supervised proof.
-- Only the older V1 has a supervised live 100% material-mismatch settlement; 0% and 50% remain local-test-only paths.
+- Live remediation evidence currently covers replacement deployment, exact-ID order creation, issuer-signed evidence registration, and a finalized replacement-contract 100% material-mismatch refund; normal release and expiry recovery still require supervised proof.
+- The 0% and 50% dispute tiers remain local-test-only paths.
 - The frontend currently depends on an injected EIP-1193 wallet and browser polling.
 
 See [ROADMAP.md](ROADMAP.md) for deployment verification, durable evidence storage, observability, cancellation policy, and controlled pilot plans.

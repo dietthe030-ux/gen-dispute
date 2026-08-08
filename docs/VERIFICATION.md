@@ -57,7 +57,7 @@ Results:
 
 - Contract: `47 passed`.
 - GenVM: lint passed, validation passed, 10 public methods detected.
-- Frontend: `40 passed` across 4 test files.
+- Frontend: `41 passed` across 4 test files.
 - Oxlint: zero errors.
 - TypeScript and Vite production build: passed.
 - Repository gate audit: `PASS`.
@@ -84,7 +84,7 @@ Contract tests use an isolated WSL environment with `genlayer-test==0.29.2`. Web
 - EIP-6963/EIP-1193 injected-wallet discovery, explicit provider selection, Studionet switching, mandatory per-connect wallet signatures, signature rejection, reconnect-after-disconnect, and network-switch failures;
 - explicit order lookup and account-change selection clearing;
 - exact `create_order` return decoding under a simulated concurrent count race;
-- accepted, finalized, majority-disagree, undetermined, execution-error, finalization-timeout, and post-quorum idle-validator handling, including the live RPC `leader_receipt` shape;
+- accepted, finalized, majority-disagree, undetermined, execution-error, finalization-timeout, post-submission RPC recovery through terminal state readback, and post-quorum idle-validator handling, including the live RPC `leader_receipt` shape;
 - normal buyer release and expired recovery writes;
 - buyer reason-only dispute UI with no outcome/evidence selectors, issuer receipt registration, and reviewer-facing `/docs` content.
 
@@ -121,7 +121,7 @@ Before the replacement can pass `POST_DEPLOY_TEST`:
 1. ~~deploy the exact contract source above on Studionet~~ — completed at `0xd5DBaE8c1A1B2A8F34dba3e4AdC62f9263EaB53d`;
 2. ~~verify deployment `FINALIZED`, execution `SUCCESS`, Explorer source parity, upgrader readback, and evidence-issuer readback~~ — completed;
 3. rehearse authorized upgrade and unauthorized rejection on a separate throwaway deployment;
-4. prove exact-ID order creation, buyer confirmation, evidence-bound dispute settlement, and expiry recovery with transaction receipts and state readback;
+4. exact-ID order creation and evidence-bound dispute settlement are proven; buyer confirmation and expiry recovery still require transaction receipts and state readback;
 5. ~~update the frontend environment to the verified replacement address and verify the live application~~ — completed;
 6. update this file with the replacement contract, deployment transaction, proof matrix, and final exact release commit.
 
@@ -130,7 +130,8 @@ Before the replacement can pass `POST_DEPLOY_TEST`:
 - Deployment: [`0x13c21f3c5d5aea282fda77c0c8d503cee8c1aff2093e6ca0b5efc11224e4a73e`](https://explorer-studio.genlayer.com/tx/0x13c21f3c5d5aea282fda77c0c8d503cee8c1aff2093e6ca0b5efc11224e4a73e) — `FINALIZED`, `MAJORITY_AGREE`, decisive executions `SUCCESS`.
 - Order `0` creation: [`0x47820c92ffe2cd7bd5820faca69cf98ad019b5727eb6c2b2f461b847100747f1`](https://explorer-studio.genlayer.com/tx/0x47820c92ffe2cd7bd5820faca69cf98ad019b5727eb6c2b2f461b847100747f1) — seller `0x0d4b...d563`, buyer `0x7885...2339`, `0.1 GEN`, `FINALIZED`, `MAJORITY_AGREE`, leader and three agreeing validators `SUCCESS`.
 - Evidence receipt registration: [`0xbb5f7256b6f8194474cf3d466d9503d6196dd5b9805d2ddce7fcc296c17f6c26`](https://explorer-studio.genlayer.com/tx/0xbb5f7256b6f8194474cf3d466d9503d6196dd5b9805d2ddce7fcc296c17f6c26) — `FINALIZED`, `MAJORITY_AGREE`, decisive executions `SUCCESS`.
-- Order `0` readback: `OPEN`, `0.1 GEN` escrow, Casio Version B listing, zero dispute attempts, with its issuer-signed receipt registered.
+- Material-mismatch dispute: [`0x689f98cc38614819171d50797a71dd6c9639a6d947fcffeaf1dc204ffd75feac`](https://explorer-studio.genlayer.com/tx/0x689f98cc38614819171d50797a71dd6c9639a6d947fcffeaf1dc204ffd75feac) — `FINALIZED`, `MAJORITY_AGREE`, three agreeing validator executions `SUCCESS`, with a finalized `0.1 GEN` transfer to the buyer.
+- Order `0` readback: `PAID_OUT`, `MATERIAL_MISMATCH`, 100% refund, buyer payout `0.1 GEN`, seller payout `0`.
 - The RPC returned two post-quorum validators as `idle` with `CONSENSUS_VALIDATOR_QUORUM_REACHED`; they did not contribute to the accepted result. The frontend now ignores those non-decisive entries and has a regression matching this live receipt shape.
 
 ## Historical V1 evidence
