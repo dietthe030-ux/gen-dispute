@@ -40,9 +40,9 @@ A verdict is accepted only when provenance, body-hash, schema, and internal-cons
 ### Buyer
 
 1. Load the known order ID and inspect its seller, listing snapshot, escrow, and deadline.
-2. Wait until the order shows an issuer-registered receipt.
-3. Confirm a correct delivery to release the full escrow to the seller, or submit only a reason through `open_dispute`.
-4. If evaluation is undetermined, wait for the issuer to register a new receipt before using the single retry.
+2. While the order is `OPEN`, confirm a correct delivery or submit only a reason through `open_dispute`; the buyer never supplies evidence or a payout tier.
+3. If no issuer receipt is registered, the initial dispute fails closed as `UNDETERMINED`: no funds move and escrow remains locked.
+4. After an undetermined attempt, wait for the issuer to register a fresh URL, hash, and nonce before using the single retry.
 
 ### Evidence issuer
 
@@ -168,11 +168,11 @@ The contract is classified as upgradable through GenLayer Root Slot. Any upgrade
 ## Known limitations
 
 - The fixture registry and three payout tiers are intentionally narrow and do not support arbitrary marketplace listings.
-- The repository ships demonstration receipts only for order `0`; another order requires the issuer to publish a new receipt with that exact order ID and nonce before registration.
+- The candidate repository contains order-`0` Rolex/Casio match, partial, mismatch, and injection receipts plus exact receipts for orders `3`, `4`, `5`, and `6`. Presence in the repository or public fixture route is not proof of registration or successful live settlement. Every receipt is valid only for its embedded order ID, item ID, publisher ID, and nonce; any other order requires a newly published receipt.
 - There is no mutual cancellation path.
 - Evidence bytes are content-addressed by SHA-256 but are not stored in a durable decentralized storage network and may later disappear from their URLs.
-- Live remediation evidence covers replacement deployment, exact-ID order creation, issuer-signed evidence registration, a finalized replacement-contract 100% material-mismatch refund, buyer-confirmed normal release, and expired escrow recovery.
-- The 0% and 50% dispute tiers remain local-test-only paths.
+- Prior live evidence covers 0% and 100% dispute outcomes, buyer-confirmed release, and expired recovery. It remains evidence for the prior deployed source only.
+- Repeated live 50% attempts finalized as `MAJORITY_DISAGREE` and exposed the validator guard corrected by this candidate; a successful 50% settlement remains pending candidate deployment.
 - The frontend currently depends on an injected EIP-1193 wallet. Consensus is polled through a bounded-retry, same-origin Vercel proxy to the official Studionet RPC; selected orders are refreshed only on explicit loads and transaction lifecycle events so idle tabs do not consume the shared RPC quota. The proxy is not a separate source of chain truth.
 
 See [ROADMAP.md](ROADMAP.md) for deployment verification, durable evidence storage, observability, cancellation policy, and controlled pilot plans.

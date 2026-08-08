@@ -169,15 +169,19 @@ export const DocsPage = () => {
               <h3>Register order-bound evidence</h3>
               <p>
                 A separate issuer signs a transaction binding one HTTPS receipt, SHA-256,
-                observation time, and unique nonce to the exact order. Bundled receipts cover order 0;
-                later orders need newly published receipts. The buyer only submits a reason.
+                observation time, and unique nonce to the exact order. Candidate fixtures cover
+                order 0 and exact orders 3, 4, 5, and 6, but repository presence does not prove
+                registration or live success. Each receipt is valid only for its embedded order,
+                item, publisher, and nonce.
               </p>
             </article>
             <article>
               <h3>Settle the escrow</h3>
               <p>
-                Validators may agree on a dispute tier. The buyer can also confirm delivery,
-                while either party can release an unresolved order after its deadline.
+                While an order is open, the buyer may submit only a reason even without a receipt.
+                Missing evidence fails closed as undetermined with no payout; a retry requires a
+                fresh issuer receipt. The buyer may instead confirm delivery, while either party
+                can release an unresolved order after its deadline.
               </p>
             </article>
           </div>

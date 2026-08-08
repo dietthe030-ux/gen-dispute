@@ -14,14 +14,14 @@ This directory contains the React 19, TypeScript, and Vite interface for the Gen
 1. The app requests or adds GenLayer Studionet (`61999`).
 2. A connected wallet can create an order or load a known order ID.
 3. The selected order determines whether the wallet is the buyer, seller, evidence issuer, or an observer.
-4. Only the evidence issuer can register a receipt. Only the selected order's buyer receives the reason-only dispute action after a receipt exists.
+4. Only the evidence issuer can register a receipt. While an order is `OPEN`, its buyer receives the reason-only dispute action even if no receipt exists; that initial attempt fails closed as `UNDETERMINED` with no payout.
 5. Account changes clear the selected order. The app never assumes that a new wallet owns or should view order `0`.
 
 ## Evidence behavior
 
-The remediation contract separates evidence authority from both trading parties. The deployment wallet is the evidence issuer and signs `register_evidence_receipt`, binding a trusted-origin URL, exact SHA-256, one-time nonce, and observation time to one order. The receipt attestation must contain that exact order ID, canonical item ID, publisher ID, and nonce. The buyer UI has no evidence URL fields or payout presets; it can only submit a reason after registration. The interface displays receipt provenance and the per-attempt commitments.
+The remediation contract separates evidence authority from both trading parties. The deployment wallet is the evidence issuer and signs `register_evidence_receipt`, binding a trusted-origin URL, exact SHA-256, one-time nonce, and observation time to one order. The receipt attestation must contain that exact order ID, canonical item ID, publisher ID, and nonce. The buyer UI has no evidence URL fields or payout presets. An initial reason-only dispute may be submitted without a receipt and fails closed; after `UNDETERMINED`, the retry remains unavailable until the issuer registers a fresh receipt. The interface displays receipt provenance and the per-attempt commitments.
 
-The bundled receipt pages are demonstration artifacts for order `0`. For any other order, the issuer must first publish a new receipt at the trusted origin with that exact order ID and a new nonce; changing only a URL query is invalid.
+The candidate bundles order-`0` Rolex/Casio match, partial, mismatch, and injection receipts plus exact receipts for orders `3`, `4`, `5`, and `6`. A bundled or publicly reachable page is not proof of on-chain registration or successful settlement. Each receipt remains valid only for its embedded order ID, item ID, publisher ID, and nonce; changing only a URL query is invalid.
 
 ## Transaction lifecycle
 

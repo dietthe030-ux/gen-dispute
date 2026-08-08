@@ -1613,6 +1613,21 @@ def test_public_evidence_fixtures_match_contract_listing():
         assert "Omega" not in source
         assert "Seamaster" not in source
 
+        if fixture_name != "fixture_listing.html":
+            match = re.search(
+                r'<script id="gendispute-attestation" type="application/json">([^<]+)</script>',
+                source,
+            )
+            assert match is not None
+            attestation = json.loads(match.group(1))
+            assert attestation["publisher_id"] == "GENDISPUTE_DEMO_ATTESTATION_V1"
+            assert attestation["item_id"] in {
+                "WATCH_ROLEX_SUBMARINER",
+                "WATCH_CASIO_DIGITAL",
+            }
+            assert isinstance(attestation["order_id"], int)
+            assert attestation["evidence_nonce"]
+
     match_evidence = (root_fixtures / "fixture_evidence_match.html").read_text(
         encoding="utf-8"
     )

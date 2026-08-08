@@ -6,8 +6,8 @@
 | --- | --- |
 | Project | GenDispute |
 | Submission category | Project |
-| Prior anonymous-reviewed commit | `f3e81b81221b7ae7b04bb5bbcbbb4c9bd3d86c58` (`CHANGES REQUIRED`) |
-| Prior reviewed contract SHA-256 | `78d7d013ddc747a9776468ee01194744d2d86363e0c18f8dd4a58c2ae8604515` |
+| Prior anonymous-reviewed commit | `d611d84f17bff187beecb1dc0dc0f6c65915d1e5` (`CHANGES REQUIRED`) |
+| Prior reviewed contract SHA-256 | `22d16b89b97f9570107adc76fe7d9f212641a7b04b0611d1b872bf47911cb6ed` |
 | Approved PRE_DEPLOY commit | `a350de3db6fea88918cb55110225e9cb9f90b6d1` (`APPROVED`) |
 | Exact reviewed revision | Supplied by `git rev-parse HEAD` in each checkpoint package; it is not self-embedded because editing this file changes the commit hash. |
 | Current candidate source SHA-256 | `22d16b89b97f9570107adc76fe7d9f212641a7b04b0611d1b872bf47911cb6ed` |
@@ -81,6 +81,8 @@ Contract tests use an isolated WSL environment with `genlayer-test==0.29.2`. Web
 - two-attempt commitment preservation and expired `UNDETERMINED` recovery;
 - Root Slot upgrader readback, unauthorized rejection, empty-code rejection, and authorized replacement.
 
+The fixture-mirroring regression enumerates both fixture directories, compares every mirrored page byte-for-byte, parses every embedded attestation except the listing-only page, and validates publisher ID, item ID, numeric order ID, and non-empty nonce. Candidate receipts cover order `0` plus exact orders `3`, `4`, `5`, and `6`; repository presence is not treated as registration or live-settlement evidence.
+
 ## Frontend safety coverage
 
 - EIP-6963/EIP-1193 injected-wallet discovery, explicit provider selection, Studionet switching, mandatory per-connect wallet signatures, signature rejection, reconnect-after-disconnect, and network-switch failures;
@@ -89,6 +91,8 @@ Contract tests use an isolated WSL environment with `genlayer-test==0.29.2`. Web
 - accepted, finalized, majority-disagree, undetermined, execution-error, finalization-timeout, same-origin RPC retry behavior without 429 amplification, order-scoped transaction attribution, post-submission RPC recovery through terminal state readback, and post-quorum idle-validator handling, including the live RPC `leader_receipt` shape;
 - normal buyer release and expired recovery writes;
 - buyer reason-only dispute UI with no outcome/evidence selectors, issuer receipt registration, and reviewer-facing `/docs` content.
+
+The initial `OPEN` buyer flow exposes only the reason field even when no receipt is registered. Missing evidence fails closed as `UNDETERMINED` with zero payout. The retry flow remains blocked until the issuer registers a fresh URL, hash, and nonce.
 
 ## Deployment and recovery gate
 
@@ -140,14 +144,9 @@ The exact candidate revision is supplied by `git rev-parse HEAD` in each review 
 
 **Studionet/network-state reset:** treat the prior address and state as unrecoverable. Redeploy the exact recorded source with no constructor arguments from the selected wallet, verify `FINALIZED`, execution `SUCCESS`, deployed-source parity, and `get_upgrader()` readback, rerun the full live proof matrix, then update the frontend address and all deployment documentation. Do not present the previous address as current evidence.
 
-Completed `POST_DEPLOY_TEST` requirements:
+The prior deployment and its proof matrix below do not satisfy `POST_DEPLOY_TEST` for the current candidate. Candidate deployment, source parity, role readbacks, live settlement, frontend integration, and a candidate-scoped live upgrade rehearsal remain pending.
 
-1. ~~deploy the exact contract source above on Studionet~~ — completed at `0xd5DBaE8c1A1B2A8F34dba3e4AdC62f9263EaB53d`;
-2. ~~verify deployment `FINALIZED`, execution `SUCCESS`, Explorer source parity, upgrader readback, and evidence-issuer readback~~ — completed;
-3. ~~rehearse authorized upgrade and unauthorized rejection on a separate test deployment~~ — completed by `test_root_slot_upgrade_is_restricted_to_deployer`, using the GenLayer Testing Suite lifecycle recommended by the official upgradability documentation;
-4. ~~verify exact-ID creation, evidence-bound dispute settlement, buyer confirmation, and expiry recovery~~ — completed with Explorer transaction evidence and live frontend state readback;
-5. ~~update the frontend environment to the verified replacement address and verify the live application~~ — completed;
-6. ~~update this file with the replacement contract, deployment transaction, proof matrix, and exact-release revision procedure~~ — completed.
+Local `PRE_DEPLOY` coverage proves that `upgrade(new_code)` rejects a non-upgrader and empty code and accepts a non-empty payload from the recorded upgrader. A separate historical Studionet rehearsal also exists at [`0x9627b7944bf1B8c54969391075E8c856a22dD249`](https://explorer-studio.genlayer.com/address/0x9627b7944bf1B8c54969391075E8c856a22dD249): the authorized transaction [`0xd46d339f6ade5da9e17cda5469f8f88c0cecc2d92deb96f71ca73a1ac28652cf`](https://explorer-studio.genlayer.com/tx/0xd46d339f6ade5da9e17cda5469f8f88c0cecc2d92deb96f71ca73a1ac28652cf) is `FINALIZED`, `MAJORITY_AGREE`, and execution `SUCCESS`; the unauthorized transaction [`0x2530f4c1c8651fafdfa4d3ecea70d9b5f1ee023d7fcc6a8492bb653bd9805f97`](https://explorer-studio.genlayer.com/tx/0x2530f4c1c8651fafdfa4d3ecea70d9b5f1ee023d7fcc6a8492bb653bd9805f97) finalized with an `Unauthorized address` rollback. Because this rehearsal predates the current candidate, it is historical supporting evidence only and is not marked as candidate completion.
 
 ### Replacement live evidence collected
 

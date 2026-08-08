@@ -41,7 +41,7 @@ Other current limitations are:
 
 - Listing creation is limited to a small hardcoded fixture registry; the listing URL itself is not fetched.
 - Evidence is limited to project-hosted, byte-hash-pinned demo attestations. The deployment wallet authenticates registrations and is contractually distinct from the parties, but it is not an external logistics or marketplace provider. Exact bytes are not stored permanently.
-- Packaged demonstration receipts are bound to order `0`; every later order requires a newly published issuer receipt with its own order ID and nonce.
+- Candidate fixtures include order-`0` Rolex/Casio match, partial, mismatch, and injection receipts plus exact order-bound receipts for orders `3`, `4`, `5`, and `6`. Repository presence does not prove registration or live success; each receipt remains valid only for its embedded order ID, item ID, publisher ID, and nonce.
 - Live evidence covers supervised 0% and 100% outcomes. Repeated 50% attempts exposed a validator guard that rejected an otherwise valid leader result containing `included_items: UNKNOWN`; the local fix is tested but not yet deployed.
 - A separate previous test instance contains two funded orders and three undetermined attempts; that state does not migrate to production.
 - There is no mutual cancellation path. Expired recovery returns the seller-funded escrow to the seller.
@@ -89,8 +89,8 @@ Current evidence is separated from future targets.
 | Contract regression reliability | 48/48 local tests pass. | All required checks pass for every release candidate. | Pinned CI logs and reviewed GenVM test output. |
 | Frontend regression reliability | 46/46 tests, lint, and build pass. | All required checks pass on every main-branch change. | CI test, lint, typecheck, and build results. |
 | Source-to-deployment integrity | The live address matches its prior reviewed source, but the current local validator fix is not deployed. | Re-establish exact source/address alignment before release. | Commit hash, deployment transaction, Explorer source, and production environment review. |
-| Transaction success | The replacement deployment, first `create_order`, receipt registration, and 100% material-mismatch dispute finalized with successful decisive executions and majority agreement; this sample is too small for a reliability rate. | At least 95% of wallet-approved supervised writes finalize with accepted consensus, excluding user rejection. | Reconcile frontend submissions with Explorer receipts and execution results. |
-| End-to-end dispute completion | Replacement order `0` is `PAID_OUT` with a verified 100% buyer refund after issuer-bound evidence evaluation. Historical V1 contains a separate 100% refund example. | At least 10 supervised finalized disputes after lifecycle hardening, including evidence for every supported tier. | Explorer transactions and post-transaction contract-state reconciliation. |
+| Transaction success | The prior deployment has successful 0% and 100% dispute outcomes, while repeated 50% attempts finalized as `MAJORITY_DISAGREE`; this sample is too small for a reliability rate and does not prove the candidate source. | At least 95% of wallet-approved supervised writes finalize with accepted consensus, excluding user rejection. | Reconcile frontend submissions with Explorer receipts and execution results. |
+| End-to-end dispute completion | Prior live orders prove 0% and 100% outcomes. A successful 50% settlement remains pending deployment of the tested validator fix. | At least 10 supervised finalized disputes after lifecycle hardening, including evidence for every supported tier. | Explorer transactions and post-transaction contract-state reconciliation. |
 | Order selection correctness | A concurrent-creation regression proves that the app uses the returned ID even when the global count advances to 12. | Zero incorrect post-create selections during the pilot. | Leader-result payload decoding tests and consent-based pilot issue logs. |
 | Fund safety | Replacement order `0` records buyer payout `0.1 GEN`, seller payout `0`, and terminal `PAID_OUT` state. Historical V1 has a zero contract balance; a separate test instance still holds `0.20 GEN` across two open orders. | Zero unreconciled production balances and a documented result for every terminal and recovery state. | Contract balance reconciliation, state monitoring, and incident records. |
 | Initial reach | No verified users or community count. | 25 qualified pilot wallets and 10 participants completing a second supported flow within 30 days. | Deduplicated opt-in pilot cohorts excluding team and automated wallets. |
@@ -100,7 +100,7 @@ Current evidence is separated from future targets.
 
 ### Phase 1: Broaden funded end-to-end coverage
 
-- **Problem:** One 100% refund is verified, but the 0% and 50% paths and repeated-flow reliability are not yet demonstrated live.
+- **Problem:** Prior live evidence verifies 0% and 100% outcomes, but the corrected 50% path and repeated-flow reliability are not yet demonstrated on the candidate deployment.
 - **User value:** Reviewers and users can verify all bounded settlement outcomes instead of one path.
 - **Changes:** Run supervised low-value smoke tests for the remaining fixture-backed payout tiers and preserve Explorer evidence.
 - **Integrations:** GenLayer Studio, Studionet Explorer, GitHub, and Vercel.
