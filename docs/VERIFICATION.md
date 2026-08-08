@@ -11,7 +11,7 @@
 | Contract PRE_DEPLOY status | `APPROVED` for commit `0d13b529e07e82a3679f593364881c9232789b5f` and normalized contract SHA-256 `21830bd59bf6df93d9314bed3ff27925afdc44dbd7f8509ff72b5d565d412c4d` |
 | Exact reviewed revision | Supplied by `git rev-parse HEAD` in each checkpoint package; it is not self-embedded because editing this file changes the commit hash. |
 | Current candidate source SHA-256 | `21830bd59bf6df93d9314bed3ff27925afdc44dbd7f8509ff72b5d565d412c4d` |
-| Current candidate deployment status | Deployed and source-parity verified; frontend-only release delta requires final exact-revision review |
+| Current candidate deployment status | Deployed, source-parity verified, and exercised through finalized 50% and 100% settlements; final exact-revision review remains |
 | Public `main` revision | The release revision returned by `git rev-parse HEAD`; this file does not self-embed the commit that contains it |
 | Prior deployed source SHA-256 | `9b1cece7f2feb3af52817bce8e0be62d02f5e493da1671557fa6269faca35a23` |
 | Network | GenLayer Studionet, chain ID `61999` |
@@ -60,7 +60,7 @@ Results:
 
 - Contract: `48 passed`.
 - GenVM: lint passed, validation passed, 10 public methods detected.
-- Frontend: `46 passed` across 5 test files.
+- Frontend: `47 passed` across 5 test files.
 - Oxlint: zero errors.
 - TypeScript and Vite production build: passed.
 - Repository gate audit: `PASS`.
@@ -82,7 +82,7 @@ Contract tests use an isolated WSL environment with `genlayer-test==0.29.2`. Web
 - two-attempt commitment preservation and expired `UNDETERMINED` recovery;
 - Root Slot upgrader readback, unauthorized rejection, empty-code rejection, and authorized replacement.
 
-The fixture-mirroring regression enumerates both fixture directories, compares every mirrored page byte-for-byte, parses every embedded attestation except the listing-only page, and validates publisher ID, item ID, numeric order ID, and non-empty nonce. Candidate receipts cover order `0` plus exact orders `3`, `4`, `5`, and `6`; repository presence is not treated as registration or live-settlement evidence.
+The fixture-mirroring regression enumerates both fixture directories, compares every mirrored page byte-for-byte, parses every embedded attestation except the listing-only page, and validates publisher ID, item ID, numeric order ID, and non-empty nonce. Candidate receipts cover order `0` plus exact orders `1`, `3`, `4`, `5`, and `6`; repository presence is not treated as registration or live-settlement evidence.
 
 ## Frontend safety coverage
 
@@ -147,7 +147,7 @@ The exact candidate revision is supplied by `git rev-parse HEAD` in each review 
 
 **Studionet/network-state reset:** treat the prior address and state as unrecoverable. Redeploy the exact recorded source with no constructor arguments from the selected wallet, verify `FINALIZED`, execution `SUCCESS`, deployed-source parity, and `get_upgrader()` readback, rerun the full live proof matrix, then update the frontend address and all deployment documentation. Do not present the previous address as current evidence.
 
-Candidate deployment, source parity, role readbacks, exact-ID order creation, issuer registration, and a 100% live settlement are verified below. A candidate-scoped 50% settlement, publication of the matching frontend, and final exact-revision review remain pending at this checkpoint.
+Candidate deployment, source parity, role readbacks, exact-ID order creation, issuer registration, matching production frontend publication, and 50% and 100% live settlements are verified below. Final exact-revision review remains pending at this checkpoint.
 
 Local coverage proves that `upgrade(new_code)` rejects a non-upgrader and empty code and accepts a non-empty payload from the recorded upgrader. The exact candidate source was also rehearsed on isolated contract [`0x6A480D0350ACc67C3667F54933839Ddb6d0D4d51`](https://explorer-studio.genlayer.com/address/0x6A480D0350ACc67C3667F54933839Ddb6d0D4d51): authorized transaction [`0x60303e3389e6c95ca899b2aa26cfdc630a36890f4cb64d9e03847609e3cabfc8`](https://explorer-studio.genlayer.com/tx/0x60303e3389e6c95ca899b2aa26cfdc630a36890f4cb64d9e03847609e3cabfc8) is `FINALIZED`, `MAJORITY_AGREE`, and execution `SUCCESS`; unauthorized seller transaction [`0x3f7f75c78e54b9af8096328241fac9c72ecbd35dce6bb45a7b4083cbe098a883`](https://explorer-studio.genlayer.com/tx/0x3f7f75c78e54b9af8096328241fac9c72ecbd35dce6bb45a7b4083cbe098a883) finalized with an `Unauthorized address` rollback. Source hash and role readbacks remained unchanged.
 
@@ -158,7 +158,9 @@ Local coverage proves that `upgrade(new_code)` rejects a non-upgrader and empty 
 - Order `0` creation: [`0xf490087d737879ea0845da5b2f4c8f2bd2126a372428c60b1fdbe70d76b84b35`](https://explorer-studio.genlayer.com/tx/0xf490087d737879ea0845da5b2f4c8f2bd2126a372428c60b1fdbe70d76b84b35) — `FINALIZED`, `MAJORITY_AGREE`, decisive executions `SUCCESS`; exact returned order ID `0`, seller `0x0d4b...d563`, buyer `0x7885...2339`, escrow `0.1 GEN`.
 - Issuer receipt registration: [`0x779d661cec3552080370f68c57222e32baa55034c3bd0b310e4c2e4b147e4873`](https://explorer-studio.genlayer.com/tx/0x779d661cec3552080370f68c57222e32baa55034c3bd0b310e4c2e4b147e4873) — `FINALIZED`, `MAJORITY_AGREE`, decisive executions `SUCCESS`; URL, lowercase SHA-256, nonce, and observation time match order readback.
 - Material-mismatch dispute: [`0xec8d9abce9a3d72a7556d5f3e9769f875874942b53ba8faae9b4010af8b362a1`](https://explorer-studio.genlayer.com/tx/0xec8d9abce9a3d72a7556d5f3e9769f875874942b53ba8faae9b4010af8b362a1) — buyer sender, `FINALIZED`, `MAJORITY_AGREE`, decisive executions `SUCCESS`; readback `PAID_OUT`, `MATERIAL_MISMATCH`, 100% buyer refund, buyer payout `0.1 GEN`, seller payout `0`.
-- The 100% outcome is consistent with an original collectible box being absent. That used receipt remains immutable. A separate order-`1` receipt describes a shallow, explicitly non-material cosmetic condition difference for the pending 50% smoke test.
+- The 100% outcome is consistent with an original collectible box being absent. That used receipt remains immutable.
+- Order `1` issuer receipt registration: [`0x7128b0dcd19da2f33b6e683db25d785d87e56d5d5d69c38b5f1470658f2c0a20`](https://explorer-studio.genlayer.com/tx/0x7128b0dcd19da2f33b6e683db25d785d87e56d5d5d69c38b5f1470658f2c0a20) — `FINALIZED`, `MAJORITY_AGREE`, decisive executions `SUCCESS`; readback binds order `1` to receipt SHA-256 `9df592f5661674af9aec9fad18cb8f23ff905168e27138d255986cde33946f4d` and nonce `ORDER_1_ROLEX_MINOR_CONDITION_V1`.
+- Partial-mismatch dispute: [`0x8a30903d094b1855ec6730cae7b2c38ed392863289961f97f7b29910a8a0a94f`](https://explorer-studio.genlayer.com/tx/0x8a30903d094b1855ec6730cae7b2c38ed392863289961f97f7b29910a8a0a94f) — buyer sender, `FINALIZED`, `MAJORITY_AGREE`, all four decisive executions `SUCCESS`; readback `PAID_OUT`, `PARTIAL_MISMATCH`, refund tier `50`, escrow `0.1 GEN`, buyer payout `0.05 GEN`, seller payout `0.05 GEN`, and no recorded error.
 
 ### Prior replacement live evidence collected
 

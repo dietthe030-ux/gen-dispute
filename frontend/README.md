@@ -21,7 +21,7 @@ This directory contains the React 19, TypeScript, and Vite interface for the Gen
 
 The remediation contract separates evidence authority from both trading parties. The deployment wallet is the evidence issuer and signs `register_evidence_receipt`, binding a trusted-origin URL, exact SHA-256, one-time nonce, and observation time to one order. The receipt attestation must contain that exact order ID, canonical item ID, publisher ID, and nonce. The buyer UI has no evidence URL fields or payout presets. An initial reason-only dispute may be submitted without a receipt and fails closed; after `UNDETERMINED`, the retry remains unavailable until the issuer registers a fresh receipt. The interface displays receipt provenance and the per-attempt commitments.
 
-The candidate bundles order-`0` Rolex/Casio match, partial, mismatch, and injection receipts plus exact receipts for orders `3`, `4`, `5`, and `6`. A bundled or publicly reachable page is not proof of on-chain registration or successful settlement. Each receipt remains valid only for its embedded order ID, item ID, publisher ID, and nonce; changing only a URL query is invalid.
+The candidate bundles order-`0` Rolex/Casio match, partial, mismatch, and injection receipts plus exact receipts for orders `1`, `3`, `4`, `5`, and `6`. A bundled or publicly reachable page is not proof of on-chain registration or successful settlement. Each receipt remains valid only for its embedded order ID, item ID, publisher ID, and nonce; changing only a URL query is invalid.
 
 ## Transaction lifecycle
 

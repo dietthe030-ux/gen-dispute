@@ -16,7 +16,7 @@ describe('DocsPage', () => {
     expect(screen.getByText('Independent validator check')).toBeInTheDocument()
     expect(screen.getByText('Evidence commitment')).toBeInTheDocument()
     expect(screen.getByText(/Missing evidence fails closed as undetermined/)).toBeInTheDocument()
-    expect(screen.getByText(/Candidate fixtures cover order 0 and exact orders 3, 4, 5, and 6/)).toBeInTheDocument()
+    expect(screen.getByText(/Candidate fixtures cover order 0 and exact orders 1, 3, 4, 5, and 6/)).toBeInTheDocument()
     expect(screen.getByText('confirm_delivery(order_id) -> None')).toBeInTheDocument()
     expect(screen.getByText('recover_expired_order(order_id) -> None')).toBeInTheDocument()
     expect(screen.getByText('upgrade(new_code) -> None')).toBeInTheDocument()

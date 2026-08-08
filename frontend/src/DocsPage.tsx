@@ -170,7 +170,7 @@ export const DocsPage = () => {
               <p>
                 A separate issuer signs a transaction binding one HTTPS receipt, SHA-256,
                 observation time, and unique nonce to the exact order. Candidate fixtures cover
-                order 0 and exact orders 3, 4, 5, and 6, but repository presence does not prove
+                order 0 and exact orders 1, 3, 4, 5, and 6, but repository presence does not prove
                 registration or live success. Each receipt is valid only for its embedded order,
                 item, publisher, and nonce.
               </p>
