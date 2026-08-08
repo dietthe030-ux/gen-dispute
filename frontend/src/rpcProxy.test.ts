@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import handler from './rpc'
+import handler from '../api/rpc'
 
 const response = () => {
   const res: any = {}

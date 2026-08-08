@@ -9,7 +9,7 @@ export default async function handler(req: any, res: any) {
   }
 
   const body = typeof req.body === 'string' ? req.body : JSON.stringify(req.body)
-  if (!body || Buffer.byteLength(body) > MAX_BODY_BYTES) {
+  if (!body || new TextEncoder().encode(body).byteLength > MAX_BODY_BYTES) {
     return res.status(413).json({ error: 'Invalid RPC request body' })
   }
 
