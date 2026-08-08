@@ -6,11 +6,11 @@
 | --- | --- |
 | Project | GenDispute |
 | Submission category | Project |
-| Prior anonymous-reviewed commit | `320774400a3d1af9377ce8a300e1e2573a2c430b` (`CHANGES REQUIRED`) |
+| Prior anonymous-reviewed commit | `d1cf6a41f956ee7566d8a7dcb353a8b62e1b6b72` (`APPROVED`, superseded by LF-only source normalization) |
 | Prior reviewed contract SHA-256 | `22d16b89b97f9570107adc76fe7d9f212641a7b04b0611d1b872bf47911cb6ed` |
-| Approved PRE_DEPLOY commit | `a350de3db6fea88918cb55110225e9cb9f90b6d1` (`APPROVED`) |
+| Current PRE_DEPLOY status | Pending fresh anonymous review for the normalized source hash |
 | Exact reviewed revision | Supplied by `git rev-parse HEAD` in each checkpoint package; it is not self-embedded because editing this file changes the commit hash. |
-| Current candidate source SHA-256 | `22d16b89b97f9570107adc76fe7d9f212641a7b04b0611d1b872bf47911cb6ed` |
+| Current candidate source SHA-256 | `21830bd59bf6df93d9314bed3ff27925afdc44dbd7f8509ff72b5d565d412c4d` |
 | Current candidate deployment status | Not deployed; fresh deployment or authorized upgrade required |
 | Public `main` revision | `29a218fe03808994ac66287620374b1d1f32f3cf` (prior source; candidate not pushed) |
 | Prior deployed source SHA-256 | `9b1cece7f2feb3af52817bce8e0be62d02f5e493da1671557fa6269faca35a23` |
@@ -99,6 +99,8 @@ The initial `OPEN` buyer flow exposes only the reason field even when no receipt
 
 The prior source completed its recorded deployment checks. The current candidate source hash has changed to fix a live validator-compatibility defect and therefore requires a fresh exact-revision review and deployment gate before it can replace the live baseline.
 
+An attempted deployment at `0x6A480D0350ACc67C3667F54933839Ddb6d0D4d51` (`0x82a702dccaf573da9b8b3ba14b929c5d6ea95dbead570c39acc0c8b98c39b6be`) finalized with majority agreement, successful execution, correct role readbacks, and zero orders, but it is not an accepted candidate deployment. Studio normalized 96 mixed CRLF line endings to LF, changing the deployed byte hash from the anonymous-approved `22d16b89b97f9570107adc76fe7d9f212641a7b04b0611d1b872bf47911cb6ed` to `21830bd59bf6df93d9314bed3ff27925afdc44dbd7f8509ff72b5d565d412c4d`. The normalized text is line-for-line identical, but exact-hash approval is required. The repository now enforces LF for the contract, and a fresh `PRE_DEPLOY` review must precede a new deployment instance.
+
 ### Current candidate draft deployment manifest
 
 | Field | Value |
@@ -108,7 +110,7 @@ The prior source completed its recorded deployment checks. The current candidate
 | RPC | `https://studio.genlayer.com/api` |
 | Contract source | `contracts/gen_dispute.py` |
 | Source revision | Supplied by `git rev-parse HEAD` in the review package |
-| Source SHA-256 | `22d16b89b97f9570107adc76fe7d9f212641a7b04b0611d1b872bf47911cb6ed` |
+| Source SHA-256 | `21830bd59bf6df93d9314bed3ff27925afdc44dbd7f8509ff72b5d565d412c4d` |
 | Constructor arguments | None (`__init__(self)`) |
 | Deployment classification | `UPGRADABLE` |
 | Selected deployer/upgrader/evidence issuer | `0xbf90af1bc61314775d57b641b89c1f702a93b40d` |
