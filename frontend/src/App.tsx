@@ -219,7 +219,7 @@ const App: React.FC = () => {
                   {isBuyer &&
                     (orderState.status === 'OPEN' ||
                       (orderState.status === 'UNDETERMINED' && isRetrying)) &&
-                    hasFreshEvidenceReceipt && (
+                    (orderState.status === 'OPEN' || hasFreshEvidenceReceipt) && (
                       <DisputeForm
                         onSubmit={async (reason) => {
                           setIsRetrying(false)
@@ -227,15 +227,9 @@ const App: React.FC = () => {
                         }}
                         isLoading={isSubmitting}
                         attempts={orderState.disputeAttempts}
+                        hasEvidenceReceipt={Boolean(orderState.evidenceReceiptUrl)}
                       />
                     )}
-
-                  {isBuyer && orderState.status === 'OPEN' && !orderState.evidenceReceiptUrl && (
-                    <div className="card alert-card info">
-                      <h3>Waiting for evidence receipt</h3>
-                      <p>The independent evidence issuer must register an order-bound receipt before a dispute can be evaluated.</p>
-                    </div>
-                  )}
 
                   {isBuyer && orderState.status === 'UNDETERMINED' && isRetrying && !hasFreshEvidenceReceipt && (
                     <div className="card alert-card info">

@@ -103,6 +103,7 @@ describe('App Component', () => {
 
   it('renders order details and dispute form when connected as BUYER', () => {
     const confirmDelivery = vi.fn()
+    const openDispute = vi.fn()
     ;(useGenDispute as any).mockReturnValue({
       account: { address: '0x81b637d8fcd2c6dac59ee6963113a1170de795e4' },
       uiState: 'RETRY_AVAILABLE',
@@ -119,7 +120,7 @@ describe('App Component', () => {
         itemDescription: 'Vintage Watch description',
         itemId: 'WATCH_ROLEX_SUBMARINER',
         evidencePolicyHash: 'a'.repeat(64),
-        evidenceReceiptUrl: 'https://gen-dispute.vercel.app/fixtures/order-0.html',
+        evidenceReceiptUrl: '',
         evidenceObservedAt: [],
         status: 'OPEN',
         disputeAttempts: 0,
@@ -137,7 +138,7 @@ describe('App Component', () => {
       connectWallet: vi.fn(),
       disconnectWallet: vi.fn(),
       createOrder: vi.fn(),
-      openDispute: vi.fn(),
+      openDispute,
       confirmDelivery,
       recoverExpiredOrder: vi.fn(),
       refreshOrder: vi.fn(),
@@ -151,6 +152,10 @@ describe('App Component', () => {
     expect(screen.getByText('Order #0')).toBeInTheDocument()
     expect(screen.getByText('Buyer')).toBeInTheDocument()
     expect(screen.getByText('Open dispute')).toBeInTheDocument()
+    expect(screen.getByText(/fail closed as UNDETERMINED/)).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('Reason'), { target: { value: 'Evidence is missing.' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Submit dispute' }))
+    expect(openDispute).toHaveBeenCalledWith('Evidence is missing.')
     fireEvent.click(screen.getByRole('button', { name: 'Confirm delivery and pay seller' }))
     expect(confirmDelivery).toHaveBeenCalledOnce()
   })

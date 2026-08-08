@@ -4,9 +4,10 @@ interface DisputeFormProps {
   onSubmit: (reason: string) => void
   isLoading: boolean
   attempts: number
+  hasEvidenceReceipt?: boolean
 }
 
-export const DisputeForm: React.FC<DisputeFormProps> = ({ onSubmit, isLoading, attempts }) => {
+export const DisputeForm: React.FC<DisputeFormProps> = ({ onSubmit, isLoading, attempts, hasEvidenceReceipt = true }) => {
   const [reason, setReason] = useState('')
   const [error, setError] = useState('')
   const isRetry = attempts > 0
@@ -29,6 +30,8 @@ export const DisputeForm: React.FC<DisputeFormProps> = ({ onSubmit, isLoading, a
       <p className="card-lede">
         {isRetry
           ? 'One final evaluation after the evidence issuer registers a new receipt.'
+          : !hasEvidenceReceipt
+            ? 'No issuer receipt is registered. The contract will fail closed as UNDETERMINED and keep escrow locked.'
           : 'The contract evaluates the issuer-registered receipt for this order.'}
       </p>
       {isRetry && (
