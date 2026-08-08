@@ -1563,6 +1563,7 @@ def test_public_evidence_fixtures_match_contract_listing():
         "order-3-rolex-match.html",
         "order-4-rolex-partial.html",
         "order-5-rolex-minor-cosmetic.html",
+        "order-6-rolex-minor-condition.html",
     ]
 
     root_fixtures = project_root / "fixtures"
@@ -1625,6 +1626,13 @@ def test_public_evidence_fixtures_match_contract_listing():
     assert '"order_id":5' in order_5_minor
     assert '"evidence_nonce":"ORDER_5_ROLEX_MINOR_COSMETIC_V1"' in order_5_minor
     assert "minor and non-material" in order_5_minor
+
+    order_6_minor = (
+        root_fixtures / "order-6-rolex-minor-condition.html"
+    ).read_text(encoding="utf-8")
+    assert '"order_id":6' in order_6_minor
+    assert '"evidence_nonce":"ORDER_6_ROLEX_MINOR_CONDITION_V2"' in order_6_minor
+    assert "cosmetic condition is below excellent" in order_6_minor
 
     for url in FIXTURE_BY_URL:
         source = fixture_bytes(url).decode("utf-8")
