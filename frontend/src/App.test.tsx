@@ -46,6 +46,36 @@ describe('App Component', () => {
     expect(screen.getByRole('button', { name: 'Connect wallet' })).toBeInTheDocument()
   })
 
+  it('lets the user choose an injected wallet before connecting', () => {
+    const connectWallet = vi.fn()
+    ;(useGenDispute as any).mockReturnValue({
+      account: null,
+      walletOptions: [
+        { id: 'metamask', name: 'MetaMask' },
+        { id: 'rabby', name: 'Rabby Wallet' },
+      ],
+      uiState: 'DISCONNECTED',
+      txHash: '',
+      errorMessage: '',
+      orderState: null,
+      ...orderControls(),
+      connectWallet,
+      disconnectWallet: vi.fn(),
+      createOrder: vi.fn(),
+      openDispute: vi.fn(),
+      refreshOrder: vi.fn(),
+      setUiState: vi.fn(),
+      isRetrying: false,
+      setIsRetrying: vi.fn(),
+    })
+
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Connect account' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Rabby Wallet' }))
+
+    expect(connectWallet).toHaveBeenCalledWith('rabby')
+  })
+
   it('renders order creation form when connected but no order exists', () => {
     ;(useGenDispute as any).mockReturnValue({
       account: { address: '0x1234567890123456789012345678901234567890' },

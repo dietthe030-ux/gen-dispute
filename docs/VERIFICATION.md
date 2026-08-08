@@ -57,7 +57,7 @@ Results:
 
 - Contract: `47 passed`.
 - GenVM: lint passed, validation passed, 10 public methods detected.
-- Frontend: `38 passed` across 4 test files.
+- Frontend: `40 passed` across 4 test files.
 - Oxlint: zero errors.
 - TypeScript and Vite production build: passed.
 - Repository gate audit: `PASS`.
@@ -81,7 +81,7 @@ Contract tests use an isolated WSL environment with `genlayer-test==0.29.2`. Web
 
 ## Frontend safety coverage
 
-- Studionet connection, mandatory per-connect wallet signatures, signature rejection, reconnect-after-disconnect, and network-switch failures;
+- EIP-6963/EIP-1193 injected-wallet discovery, explicit provider selection, Studionet switching, mandatory per-connect wallet signatures, signature rejection, reconnect-after-disconnect, and network-switch failures;
 - explicit order lookup and account-change selection clearing;
 - exact `create_order` return decoding under a simulated concurrent count race;
 - accepted, finalized, majority-disagree, undetermined, execution-error, finalization-timeout, and post-quorum idle-validator handling, including the live RPC `leader_receipt` shape;
@@ -122,14 +122,15 @@ Before the replacement can pass `POST_DEPLOY_TEST`:
 2. ~~verify deployment `FINALIZED`, execution `SUCCESS`, Explorer source parity, upgrader readback, and evidence-issuer readback~~ — completed;
 3. rehearse authorized upgrade and unauthorized rejection on a separate throwaway deployment;
 4. prove exact-ID order creation, buyer confirmation, evidence-bound dispute settlement, and expiry recovery with transaction receipts and state readback;
-5. update the frontend environment to the verified replacement address and verify the live application;
+5. ~~update the frontend environment to the verified replacement address and verify the live application~~ — completed;
 6. update this file with the replacement contract, deployment transaction, proof matrix, and final exact release commit.
 
 ### Replacement live evidence collected
 
 - Deployment: [`0x13c21f3c5d5aea282fda77c0c8d503cee8c1aff2093e6ca0b5efc11224e4a73e`](https://explorer-studio.genlayer.com/tx/0x13c21f3c5d5aea282fda77c0c8d503cee8c1aff2093e6ca0b5efc11224e4a73e) — `FINALIZED`, `MAJORITY_AGREE`, decisive executions `SUCCESS`.
 - Order `0` creation: [`0x47820c92ffe2cd7bd5820faca69cf98ad019b5727eb6c2b2f461b847100747f1`](https://explorer-studio.genlayer.com/tx/0x47820c92ffe2cd7bd5820faca69cf98ad019b5727eb6c2b2f461b847100747f1) — seller `0x0d4b...d563`, buyer `0x7885...2339`, `0.1 GEN`, `FINALIZED`, `MAJORITY_AGREE`, leader and three agreeing validators `SUCCESS`.
-- Order `0` readback: `OPEN`, `0.1 GEN` escrow, Casio Version B listing, zero dispute attempts, no receipt yet.
+- Evidence receipt registration: [`0xbb5f7256b6f8194474cf3d466d9503d6196dd5b9805d2ddce7fcc296c17f6c26`](https://explorer-studio.genlayer.com/tx/0xbb5f7256b6f8194474cf3d466d9503d6196dd5b9805d2ddce7fcc296c17f6c26) — `FINALIZED`, `MAJORITY_AGREE`, decisive executions `SUCCESS`.
+- Order `0` readback: `OPEN`, `0.1 GEN` escrow, Casio Version B listing, zero dispute attempts, with its issuer-signed receipt registered.
 - The RPC returned two post-quorum validators as `idle` with `CONSENSUS_VALIDATOR_QUORUM_REACHED`; they did not contribute to the accepted result. The frontend now ignores those non-decisive entries and has a regression matching this live receipt shape.
 
 ## Historical V1 evidence

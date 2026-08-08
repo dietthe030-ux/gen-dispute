@@ -14,6 +14,7 @@ import { EvidenceReceiptForm } from './components/EvidenceReceiptForm'
 const App: React.FC = () => {
   const {
     account,
+    walletOptions,
     uiState,
     txHash,
     errorMessage,
@@ -34,6 +35,19 @@ const App: React.FC = () => {
     isRetrying,
     setIsRetrying,
   } = useGenDispute()
+  const [walletPickerOpen, setWalletPickerOpen] = React.useState(false)
+
+  const openWalletPicker = () => {
+    setWalletPickerOpen(true)
+    requestAnimationFrame(() => {
+      document.getElementById('wallet-connect')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    })
+  }
+
+  const handleWalletConnect = async (walletId: string) => {
+    await connectWallet(walletId)
+    setWalletPickerOpen(false)
+  }
 
   const handleOrderCreate = async (
     buyer: string,
@@ -91,12 +105,17 @@ const App: React.FC = () => {
       <main id="main-content" className="grid-main">
         <h1 className="sr-only">GenDispute escrow application</h1>
         <aside className="col-sidebar" aria-label="Wallet and transaction status">
-          <WalletConnect
-            address={connectedAddress || null}
-            uiState={uiState}
-            onConnect={connectWallet}
-            onDisconnect={disconnectWallet}
-          />
+          <div id="wallet-connect">
+            <WalletConnect
+              address={connectedAddress || null}
+              uiState={uiState}
+              wallets={walletOptions || []}
+              pickerOpen={walletPickerOpen}
+              onOpenPicker={openWalletPicker}
+              onConnect={handleWalletConnect}
+              onDisconnect={disconnectWallet}
+            />
+          </div>
 
           {isConnected && orderState && (
             <div className="card role-info-card">
@@ -155,7 +174,7 @@ const App: React.FC = () => {
                   Wait for consensus and payout
                 </li>
               </ol>
-              <button type="button" onClick={connectWallet} className="btn btn-primary btn-lg">
+              <button type="button" onClick={openWalletPicker} className="btn btn-primary btn-lg">
                 Connect wallet
               </button>
             </section>

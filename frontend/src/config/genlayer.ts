@@ -5,10 +5,10 @@ import { studionet } from 'genlayer-js/chains'
 // DO NOT commit any placeholder address.
 const CONTRACT_ADDRESS = (import.meta.env.VITE_CONTRACT_ADDRESS || '') as `0x${string}`
 
-// We create client configured for Studionet with explicit browser provider
-export const client = createClient({
-  chain: studionet,
-  provider: typeof window !== 'undefined' ? (window as any).ethereum : undefined
-})
+export let client = createClient({ chain: studionet })
+
+export const setWalletProvider = (provider: any) => {
+  client = createClient({ chain: studionet, provider })
+}
 
 export { CONTRACT_ADDRESS }

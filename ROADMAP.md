@@ -20,9 +20,9 @@ The remediation build includes:
 - bounded attestation extraction that excludes raw HTML and buyer-authored reasons from the LLM prompt;
 - buyer-confirmed normal release, explicit order deadlines, and participant-triggered expired-order recovery;
 - a Root Slot upgrader registered at deployment, with authorization and non-empty-code guards;
-- React 19, TypeScript, Vite, `genlayer-js`, and injected EIP-1193 wallet integration;
+- React 19, TypeScript, Vite, `genlayer-js`, EIP-6963 injected-wallet discovery, and an EIP-1193 fallback;
 - a reason-only buyer dispute form with no payout or evidence selection, plus a separate evidence-issuer registration form;
-- explicit order lookup, buyer/seller/evidence-issuer/observer roles, mandatory per-connect wallet signatures, account-change disconnection, transaction progress, receipt execution checks, and error states; and
+- explicit wallet selection, explicit order lookup, buyer/seller/evidence-issuer/observer roles, mandatory per-connect wallet signatures, account-change disconnection, transaction progress, receipt execution checks, and error states; and
 - `/docs`, root and frontend setup documentation, contract tests, and frontend tests.
 
 ### Verified evidence
@@ -31,7 +31,7 @@ The remediation build includes:
 | --- | --- |
 | Public source | [dietthe030-ux/gen-dispute](https://github.com/dietthe030-ux/gen-dispute) contains the reviewed contract, frontend, tests, and documentation. |
 | Local contract verification | 47/47 tests pass, covering issuer authorization, cross-order replay rejection, buyer outcome-selection rejection, order/item/time/nonce/hash binding, hostile inputs, independent verdict checks, commitments, deadlines, release, recovery, and Root Slot authorization. |
-| Local frontend verification | 38/38 tests pass, including concurrent returned-order decoding, mandatory reconnect signatures, live-shaped post-quorum receipt handling, issuer-registration calldata, and proof that the buyer UI exposes neither outcome presets nor evidence URL inputs; Oxlint, TypeScript compilation, and the Vite production build pass. |
+| Local frontend verification | 40/40 tests pass, including explicit provider selection, concurrent returned-order decoding, mandatory reconnect signatures, live-shaped post-quorum receipt handling, issuer-registration calldata, and proof that the buyer UI exposes neither outcome presets nor evidence URL inputs; Oxlint, TypeScript compilation, and the Vite production build pass. |
 | Current public release | [gen-dispute.vercel.app](https://gen-dispute.vercel.app) and [`0x1E877E7B333D5371a75d2EF995763bcdabaeB9cE`](https://explorer-studio.genlayer.com/address/0x1E877E7B333D5371a75d2EF995763bcdabaeB9cE) remain historical V1 evidence. They do not yet prove the remediation build. |
 | Replacement deployment | [`0xd5DBaE8c1A1B2A8F34dba3e4AdC62f9263EaB53d`](https://explorer-studio.genlayer.com/address/0xd5DBaE8c1A1B2A8F34dba3e4AdC62f9263EaB53d) is deployed from the approved source; full live workflow verification is in progress. |
 
@@ -87,7 +87,7 @@ Current evidence is separated from future targets.
 | Metric | Current evidence | Future target | Measurement |
 | --- | --- | --- | --- |
 | Contract regression reliability | 47/47 local tests pass. | All required checks pass for every release candidate. | Pinned CI logs and reviewed GenVM test output. |
-| Frontend regression reliability | 38/38 tests, lint, and build pass. | All required checks pass on every main-branch change. | CI test, lint, typecheck, and build results. |
+| Frontend regression reliability | 40/40 tests, lint, and build pass. | All required checks pass on every main-branch change. | CI test, lint, typecheck, and build results. |
 | Source-to-deployment integrity | Replacement deployed source SHA-256 exactly matches the approved local contract source; upgrader and evidence-issuer readbacks match the selected wallet. | Preserve source/address alignment for every release. | Commit hash, deployment transaction, Explorer source, and production environment review. |
 | Transaction success | The replacement deployment and first `create_order` write finalized with successful decisive executions and majority agreement; this sample is too small for a reliability rate. | At least 95% of wallet-approved supervised writes finalize with accepted consensus, excluding user rejection. | Reconcile frontend submissions with Explorer receipts and execution results. |
 | End-to-end dispute completion | Historical V1 evidence contains one `PAID_OUT` order with a 100% buyer refund. The replacement deployment currently has one `OPEN` order and no completed dispute yet. | At least 10 supervised finalized disputes after lifecycle hardening, including evidence for every supported tier. | Explorer transactions and post-transaction contract-state reconciliation. |

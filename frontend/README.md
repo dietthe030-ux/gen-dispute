@@ -1,6 +1,6 @@
 # GenDispute Frontend
 
-This directory contains the React 19, TypeScript, and Vite interface for the GenDispute multi-order Intelligent Contract. It uses `genlayer-js` with an injected EIP-1193 wallet.
+This directory contains the React 19, TypeScript, and Vite interface for the GenDispute multi-order Intelligent Contract. It uses `genlayer-js`, discovers injected wallets through EIP-6963 with an EIP-1193 fallback, and connects only the provider selected by the user.
 
 ## Routes
 
@@ -25,11 +25,11 @@ The bundled receipt pages are demonstration artifacts for order `0`. For any oth
 
 ## Transaction lifecycle
 
-Every explicit wallet connection requires `personal_sign`; disconnecting or changing accounts clears the local session, so reconnecting cannot silently reuse wallet authorization. For every write, the app switches to Studionet, submits `client.writeContract`, and shows the transaction hash while consensus is pending. It waits for `ACCEPTED`, checks consensus and decisive GenVM execution results, then waits for `FINALIZED` and checks execution again. For `create_order`, it decodes the returned `u256` from the GenVM trace and loads that exact ID; the global count is never used to infer ownership. Validators reported as idle because quorum was already reached are not treated as failures, even when the RPC includes them in `leader_receipt`. A finalization timeout remains visible as accepted/pending. Wallet rejection, RPC, validation, consensus, and execution errors are shown in the transaction panel.
+The connect action shows the injected wallets detected in the browser instead of defaulting to `window.ethereum`. Every explicit wallet connection requires `personal_sign`; disconnecting or changing accounts clears the local session, so reconnecting cannot silently reuse wallet authorization. For every write, the app switches the selected provider to Studionet, submits `client.writeContract`, and shows the transaction hash while consensus is pending. It waits for `ACCEPTED`, checks consensus and decisive GenVM execution results, then waits for `FINALIZED` and checks execution again. For `create_order`, it decodes the returned `u256` from the GenVM trace and loads that exact ID; the global count is never used to infer ownership. Validators reported as idle because quorum was already reached are not treated as failures, even when the RPC includes them in `leader_receipt`. A finalization timeout remains visible as accepted/pending. Wallet rejection, RPC, validation, consensus, execution, and wallet-selection errors are shown in the transaction panel.
 
 ## Contract configuration
 
-The local integration target is the verified replacement contract `0xd5DBaE8c1A1B2A8F34dba3e4AdC62f9263EaB53d`. The public Vercel frontend remains on V1 until live verification is complete. Set the exact replacement address through the gitignored `.env` locally and through Vercel environment configuration at release time. Never commit `.env` or use a placeholder address.
+The local and public integration target is the verified replacement contract `0xd5DBaE8c1A1B2A8F34dba3e4AdC62f9263EaB53d`. Set that exact address through the gitignored `.env` locally and through Vercel environment configuration. Never commit `.env` or use a placeholder address.
 
 ## Commands
 
@@ -43,7 +43,7 @@ npm run build
 
 Current local verification:
 
-- 38 frontend tests passed.
+- 40 frontend tests passed.
 - Oxlint completed with zero errors.
 - TypeScript compilation and the Vite production build succeeded.
 - The production build reports a non-blocking large-chunk warning.

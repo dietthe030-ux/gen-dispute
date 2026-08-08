@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { bytesToHex, hexToBytes, parseEther, type Address, type Hex } from 'viem'
 import { abi } from 'genlayer-js'
-import { client, CONTRACT_ADDRESS } from '../config/genlayer'
+import { client, CONTRACT_ADDRESS, setWalletProvider } from '../config/genlayer'
 import type { UIState, OrderState } from '../types'
 import { TransactionStatus, ExecutionResult } from 'genlayer-js/types'
 
@@ -9,6 +9,11 @@ const RECEIPT_POLL_INTERVAL_MS = 3000
 const ACCEPTED_POLL_RETRIES = 60
 const FINALIZED_POLL_RETRIES = 60
 export const DEFAULT_TIMEOUT_SECONDS = 7 * 24 * 60 * 60
+
+export interface WalletOption {
+  id: string
+  name: string
+}
 
 export const FINALIZATION_PENDING_MESSAGE =
   'Transaction accepted on Studionet. Finalization is still pending; contract state will continue to refresh.'
@@ -262,10 +267,48 @@ export const useGenDispute = () => {
   const [isOrderLoading, setIsOrderLoading] = useState<boolean>(false)
   const [isRetrying, setIsRetrying] = useState<boolean>(false)
   const [evidenceIssuer, setEvidenceIssuer] = useState<string>('')
+  const [walletOptions, setWalletOptions] = useState<WalletOption[]>([])
+  const [activeProvider, setActiveProvider] = useState<any>(null)
+  const walletProviders = useRef(new Map<string, any>())
+
+  useEffect(() => {
+    const addProvider = (id: string, name: string, provider: any) => {
+      if (!provider || [...walletProviders.current.values()].includes(provider)) return
+      walletProviders.current.set(id, provider)
+      setWalletOptions((current) =>
+        current.some((wallet) => wallet.id === id)
+          ? current
+          : [...current, { id, name }]
+      )
+    }
+    const announce = (event: Event) => {
+      const { info, provider } = (event as CustomEvent).detail
+      addProvider(info.uuid, info.name, provider)
+    }
+
+    window.addEventListener('eip6963:announceProvider', announce)
+    window.dispatchEvent(new Event('eip6963:requestProvider'))
+
+    const injected = (window as any).ethereum
+    const legacyProviders = injected?.providers || (injected ? [injected] : [])
+    legacyProviders.forEach((provider: any, index: number) => {
+      const name = provider.isRabby
+        ? 'Rabby Wallet'
+        : provider.isCoinbaseWallet
+          ? 'Coinbase Wallet'
+          : provider.isBraveWallet
+            ? 'Brave Wallet'
+            : provider.isMetaMask
+              ? 'MetaMask'
+              : 'Browser wallet'
+      addProvider(`legacy-${index}`, name, provider)
+    })
+
+    return () => window.removeEventListener('eip6963:announceProvider', announce)
+  }, [])
 
   // Request network switch/add flow
-  const checkAndSwitchNetwork = async () => {
-    const provider = (window as any).ethereum
+  const checkAndSwitchNetwork = async (provider: any) => {
     if (!provider) throw new Error('No browser wallet detected')
 
     const chainIdHex = await provider.request({ method: 'eth_chainId' })
@@ -301,17 +344,25 @@ export const useGenDispute = () => {
     }
   }
 
-  const connectWallet = useCallback(async () => {
+  const connectWallet = useCallback(async (walletId?: string) => {
     setUiState('WALLET_CONNECTING')
     setErrorMessage('')
     try {
-      const provider = (window as any).ethereum
+      const provider = walletId
+        ? walletProviders.current.get(walletId)
+        : walletOptions.length === 1
+          ? walletProviders.current.get(walletOptions[0].id)
+          : null
       if (!provider) {
-        throw new Error('No browser wallet detected. Please install MetaMask or another GenLayer compatible wallet.')
+        throw new Error(
+          walletOptions.length > 1
+            ? 'Choose a wallet to connect.'
+            : 'No browser wallet detected. Please install a GenLayer compatible wallet.'
+        )
       }
 
-      // Check and switch network first
-      await checkAndSwitchNetwork()
+      setWalletProvider(provider)
+      await checkAndSwitchNetwork(provider)
 
       const accounts = await provider.request({ method: 'eth_requestAccounts' })
       if (accounts.length === 0) {
@@ -327,6 +378,7 @@ export const useGenDispute = () => {
       })
 
       setAccount({ address: accounts[0] as Address })
+      setActiveProvider(provider)
       setSelectedOrderId(null)
       setOrderState(null)
       setUiState('RETRY_AVAILABLE')
@@ -334,7 +386,7 @@ export const useGenDispute = () => {
       setUiState('ERROR')
       setErrorMessage(e.message || 'Failed to connect wallet')
     }
-  }, [])
+  }, [walletOptions])
 
   const disconnectWallet = useCallback(() => {
     setAccount(null)
@@ -342,12 +394,13 @@ export const useGenDispute = () => {
     setSelectedOrderId(null)
     setOrderCount(null)
     setEvidenceIssuer('')
+    setActiveProvider(null)
     setUiState('DISCONNECTED')
   }, [])
 
   // Listen for account/chain changes
   useEffect(() => {
-    const provider = (window as any).ethereum
+    const provider = activeProvider
     if (provider) {
       const handleAccounts = (accounts: string[]) => {
         setAccount(null)
@@ -374,7 +427,7 @@ export const useGenDispute = () => {
         }
       }
     }
-  }, [])
+  }, [activeProvider])
 
   const refreshOrderCount = useCallback(async () => {
     if (!CONTRACT_ADDRESS) {
@@ -525,7 +578,7 @@ export const useGenDispute = () => {
       }
 
       // 2. Verify network/chain ID before write
-      await checkAndSwitchNetwork()
+      await checkAndSwitchNetwork(activeProvider)
 
       // 3. Parse GEN amount accurately
       const amountWei = parseGenAmount(amountGen)
@@ -561,7 +614,7 @@ export const useGenDispute = () => {
       setUiState('ERROR')
       setErrorMessage(e.message || 'Transaction failed')
     }
-  }, [account, refreshOrder, refreshOrderCount])
+  }, [account, activeProvider, refreshOrder, refreshOrderCount])
 
   const settleOrder = useCallback(async (
     functionName: 'confirm_delivery' | 'recover_expired_order'
@@ -575,7 +628,7 @@ export const useGenDispute = () => {
     setUiState('SUBMITTING')
     setErrorMessage('')
     try {
-      await checkAndSwitchNetwork()
+      await checkAndSwitchNetwork(activeProvider)
       const hash = await client.writeContract({
         address: CONTRACT_ADDRESS,
         functionName,
@@ -605,7 +658,7 @@ export const useGenDispute = () => {
       setUiState('ERROR')
       setErrorMessage(e.message || 'Transaction failed')
     }
-  }, [account, readOrder, refreshOrder, selectedOrderId])
+  }, [account, activeProvider, readOrder, refreshOrder, selectedOrderId])
 
   const confirmDelivery = useCallback(
     () => settleOrder('confirm_delivery'),
@@ -631,7 +684,7 @@ export const useGenDispute = () => {
     setUiState('SUBMITTING')
     setErrorMessage('')
     try {
-      await checkAndSwitchNetwork()
+      await checkAndSwitchNetwork(activeProvider)
       const hash = await client.writeContract({
         address: CONTRACT_ADDRESS,
         functionName: 'register_evidence_receipt',
@@ -656,7 +709,7 @@ export const useGenDispute = () => {
       setUiState('ERROR')
       setErrorMessage(e.message || 'Receipt registration failed')
     }
-  }, [account, readOrder, refreshOrder, selectedOrderId])
+  }, [account, activeProvider, readOrder, refreshOrder, selectedOrderId])
 
   const openDispute = useCallback(async (reason: string) => {
     if (!account) {
@@ -679,7 +732,7 @@ export const useGenDispute = () => {
     setErrorMessage('')
     try {
       // 1. Verify network/chain ID before write
-      await checkAndSwitchNetwork()
+      await checkAndSwitchNetwork(activeProvider)
 
       const hash = await client.writeContract({
         address: CONTRACT_ADDRESS,
@@ -728,10 +781,11 @@ export const useGenDispute = () => {
       setUiState('ERROR')
       setErrorMessage(e.message || 'Transaction failed')
     }
-  }, [account, refreshOrder, selectedOrderId])
+  }, [account, activeProvider, refreshOrder, selectedOrderId])
 
   return {
     account,
+    walletOptions,
     uiState,
     txHash,
     errorMessage,

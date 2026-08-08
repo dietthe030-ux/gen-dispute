@@ -5,7 +5,7 @@ import {
   useGenDispute,
   parseGenAmount,
 } from './useGenDispute'
-import { client } from '../config/genlayer'
+import { client, setWalletProvider } from '../config/genlayer'
 import { TransactionStatus } from 'genlayer-js/types'
 
 vi.mock('../config/genlayer', () => {
@@ -17,6 +17,7 @@ vi.mock('../config/genlayer', () => {
       waitForTransactionReceipt: vi.fn(),
       debugTraceTransaction: vi.fn(),
     },
+    setWalletProvider: vi.fn(),
   }
 })
 
@@ -128,6 +129,36 @@ describe('useGenDispute Hook', () => {
           '0x1122334455667788990011223344556677889900',
         ],
       })
+    })
+
+    it('connects the wallet selected by the user instead of the default injected provider', async () => {
+      const metaMask = {
+        isMetaMask: true,
+        request: vi.fn(),
+        on: vi.fn(),
+        removeListener: vi.fn(),
+      }
+      const rabby = {
+        isRabby: true,
+        request: vi.fn(async ({ method }: any) => {
+          if (method === 'eth_chainId') return '0xf22f'
+          if (method === 'eth_requestAccounts') return ['0x1122334455667788990011223344556677889900']
+          if (method === 'personal_sign') return '0xsigned'
+          return null
+        }),
+        on: vi.fn(),
+        removeListener: vi.fn(),
+      }
+      ;(window as any).ethereum = { providers: [metaMask, rabby] }
+
+      const { result } = renderHook(() => useGenDispute())
+
+      await act(async () => result.current.connectWallet('legacy-1'))
+
+      expect(setWalletProvider).toHaveBeenCalledWith(rabby)
+      expect(rabby.request).toHaveBeenCalledWith({ method: 'eth_requestAccounts' })
+      expect(metaMask.request).not.toHaveBeenCalled()
+      expect(result.current.account?.address).toBe('0x1122334455667788990011223344556677889900')
     })
 
     it('requires a new signature after an explicit disconnect', async () => {

@@ -1,9 +1,13 @@
 import React from 'react'
+import type { WalletOption } from '../hooks/useGenDispute'
 
 interface WalletConnectProps {
   address: string | null
   uiState: string
-  onConnect: () => void
+  wallets: WalletOption[]
+  pickerOpen: boolean
+  onOpenPicker: () => void
+  onConnect: (walletId: string) => void
   onDisconnect: () => void
 }
 
@@ -13,6 +17,9 @@ const formatAddress = (address: string) =>
 export const WalletConnect: React.FC<WalletConnectProps> = ({
   address,
   uiState,
+  wallets,
+  pickerOpen,
+  onOpenPicker,
   onConnect,
   onDisconnect,
 }) => {
@@ -56,7 +63,7 @@ export const WalletConnect: React.FC<WalletConnectProps> = ({
           </p>
           <button
             type="button"
-            onClick={onConnect}
+            onClick={onOpenPicker}
             disabled={isConnecting}
             className="btn btn-primary btn-block"
           >
@@ -69,6 +76,27 @@ export const WalletConnect: React.FC<WalletConnectProps> = ({
               'Connect account'
             )}
           </button>
+          {pickerOpen && !isConnecting && (
+            <div className="wallet-picker" aria-label="Available wallets">
+              <div className="meta-label">Choose a wallet</div>
+              {wallets.length > 0 ? (
+                wallets.map((wallet) => (
+                  <button
+                    key={wallet.id}
+                    type="button"
+                    className="btn btn-secondary btn-block"
+                    onClick={() => onConnect(wallet.id)}
+                  >
+                    {wallet.name}
+                  </button>
+                ))
+              ) : (
+                <p className="wallet-prompt" role="status">
+                  No injected wallet detected. Install or unlock a compatible browser wallet, then try again.
+                </p>
+              )}
+            </div>
+          )}
         </div>
       )}
     </section>
