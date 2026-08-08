@@ -163,6 +163,16 @@ describe('useGenDispute Hook', () => {
       expect(result.current.account?.address).toBe('0x1122334455667788990011223344556677889900')
     })
 
+    it('shows the same wallet only once when injected through multiple providers', () => {
+      const firstMetaMask = { isMetaMask: true, request: vi.fn() }
+      const secondMetaMask = { isMetaMask: true, request: vi.fn() }
+      ;(window as any).ethereum = { providers: [firstMetaMask, secondMetaMask] }
+
+      const { result } = renderHook(() => useGenDispute())
+
+      expect(result.current.walletOptions.filter(({ name }) => name === 'MetaMask')).toHaveLength(1)
+    })
+
     it('requires a new signature after an explicit disconnect', async () => {
       const mockRequest = (window as any).ethereum.request
       mockRequest.mockImplementation(async ({ method }: any) => {

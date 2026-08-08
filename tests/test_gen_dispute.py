@@ -1596,6 +1596,7 @@ def test_public_evidence_fixtures_match_contract_listing():
         "fixture_evidence_casio_partial.html",
         "fixture_evidence_rolex_instead_of_casio.html",
         "fixture_prompt_injection_casio.html",
+        "order-1-rolex-minor-condition.html",
         "order-3-rolex-match.html",
         "order-4-rolex-partial.html",
         "order-5-rolex-minor-cosmetic.html",
@@ -1658,6 +1659,13 @@ def test_public_evidence_fixtures_match_contract_listing():
     assert "No Casio digital watch was delivered" in rolex_for_casio
     assert "matching the listing" not in casio_match.lower()
     assert "matching the listing" not in rolex_for_casio.lower()
+
+    order_1_minor = (
+        root_fixtures / "order-1-rolex-minor-condition.html"
+    ).read_text(encoding="utf-8")
+    assert '"order_id":1' in order_1_minor
+    assert '"evidence_nonce":"ORDER_1_ROLEX_MINOR_CONDITION_V1"' in order_1_minor
+    assert "minor and non-material" in order_1_minor
 
     order_3_match = (root_fixtures / "order-3-rolex-match.html").read_text(
         encoding="utf-8"

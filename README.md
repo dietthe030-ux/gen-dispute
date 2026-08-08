@@ -2,19 +2,17 @@
 
 GenDispute is a seller-funded GEN escrow prototype for item-not-as-described trades on GenLayer Studionet. It combines issuer-authenticated, order-specific evidence receipts with validator consensus and deterministic 0%, 50%, or 100% buyer refunds.
 
-![GenDispute application](docs/gen-dispute-live.png)
-
 ## Verified links
 
 | Item | Link | Current status |
 | --- | --- | --- |
-| Web application | [gen-dispute.vercel.app](https://gen-dispute.vercel.app) | Public frontend for the prior deployed revision; the current candidate is not published |
-| Prior live contract | [`0xd5DBaE8c1A1B2A8F34dba3e4AdC62f9263EaB53d`](https://explorer-studio.genlayer.com/address/0xd5DBaE8c1A1B2A8F34dba3e4AdC62f9263EaB53d) | Previous reviewed revision; the validator-compatibility fix in the current source requires a fresh deployment or authorized upgrade before the frontend can use it |
-| Source repository | [dietthe030-ux/gen-dispute](https://github.com/dietthe030-ux/gen-dispute) | Public `main` is the prior revision at `29a218fe03808994ac66287620374b1d1f32f3cf`; the current candidate is local and not yet pushed |
+| Web application | [gen-dispute.vercel.app](https://gen-dispute.vercel.app) | Release frontend configured for the current candidate contract |
+| Studionet contract | [`0x7cFC1C241B7bb6Cf636551053dcA403B6ceD48E7`](https://explorer-studio.genlayer.com/address/0x7cFC1C241B7bb6Cf636551053dcA403B6ceD48E7) | Current candidate; deployed source matches the reviewed contract SHA-256 |
+| Source repository | [dietthe030-ux/gen-dispute](https://github.com/dietthe030-ux/gen-dispute) | Public release source on `main` |
 | Verification record | [docs/VERIFICATION.md](docs/VERIFICATION.md) | Local remediation evidence and deployment gate status |
 | Network | GenLayer Studionet, chain ID `61999` | RPC `https://studio.genlayer.com/api` |
 
-The deployment transaction [`0x13c21f...e4a73e`](https://explorer-studio.genlayer.com/tx/0x13c21f3c5d5aea282fda77c0c8d503cee8c1aff2093e6ca0b5efc11224e4a73e) is `FINALIZED` with successful GenVM execution and majority agreement. The public Vercel app still targets that deployment. Its deployed source predates the current validator-compatibility fix, so it is retained as historical live evidence rather than presented as source-identical to the current release candidate.
+The current [deployment transaction](https://explorer-studio.genlayer.com/tx/0x93d77018ef4e1bd384eeaee738a96ea7564317a610ca371d3dfcfa12b1a893a9) is `FINALIZED` with successful GenVM execution and majority agreement. RPC source readback is 38,207 LF-only bytes with SHA-256 `21830bd59bf6df93d9314bed3ff27925afdc44dbd7f8509ff72b5d565d412c4d`, matching `contracts/gen_dispute.py` at the approved deployment baseline.
 
 ## Trust problem
 
@@ -141,7 +139,7 @@ npm run build
 Current local results:
 
 - 48 contract tests passed, including a live-shaped regression proving that an independently sufficient partial mismatch remains valid when an unrelated evidence dimension is `UNKNOWN`.
-- 46 frontend tests passed, including explicit injected-wallet selection, the same-origin Studionet RPC retry proxy, rate-limit preservation, order-scoped transaction attribution, terminal-state reconciliation after a transient RPC polling failure, settled-order action messaging, exact returned-ID handling, issuer-registration calldata, and proof that the buyer UI exposes neither outcome presets nor evidence URL inputs.
+- 47 frontend tests passed, including duplicate injected-provider suppression, explicit wallet selection, the same-origin Studionet RPC retry proxy, rate-limit preservation, order-scoped transaction attribution, terminal-state reconciliation after a transient RPC polling failure, settled-order action messaging, exact returned-ID handling, issuer-registration calldata, and proof that the buyer UI exposes neither outcome presets nor evidence URL inputs.
 - GenVM lint and validation passed.
 - Oxlint, TypeScript compilation, and the Vite production build passed.
 - The production build reports a non-blocking large-chunk warning.
@@ -150,7 +148,7 @@ Local tests mock web, model, wallet, and SDK behavior. They are regression evide
 
 ## Deployment and recovery
 
-`frontend/.env.example` contains no address. The live frontend remains configured for `0xd5DBaE8c1A1B2A8F34dba3e4AdC62f9263EaB53d`. That address must not be described as the deployment of the current source until the validator-compatibility fix is deployed or upgraded and source parity is verified.
+`frontend/.env.example` contains no address. The release frontend is configured with the verified Studionet address `0x7cFC1C241B7bb6Cf636551053dcA403B6ceD48E7` through Vercel environment configuration; no contract address or credential is committed in an environment file.
 
 The submitted V1 [deployment](https://explorer-studio.genlayer.com/tx/0x7ebe17a1815e77ffcd2e6f3587693dfd3a44e7ff475f9a05ebb90fe5e19ceab8), [order creation](https://explorer-studio.genlayer.com/tx/0x6e066962310c5736670c6a20170cc61b8b81b3065e859ef78356114c33056e7f), [material-mismatch dispute](https://explorer-studio.genlayer.com/tx/0x43f8916eace1c93da67ac8fe4173e85ab55e945feafd0bde094a73fcb8695e9d), and [buyer transfer](https://explorer-studio.genlayer.com/tx/0x312f9bba5a7a0663a75da2fc46a1f41924b9416fc855c164b939d6c4e200d69a) remain historical evidence only. The replacement deployment now has live proof for exact-ID order creation, issuer-signed evidence registration, a finalized 100% material-mismatch refund, [buyer-confirmed normal release](https://explorer-studio.genlayer.com/tx/0x8ed60188d11129026a5e01f53d8a32f044575f81e461f2abaf011f1c7abe08eb), and [expired escrow recovery](https://explorer-studio.genlayer.com/tx/0x9f174a5a46d823d043c6db790d108b7f9e014035ba8e74339a7d6af891be903b).
 
@@ -168,11 +166,11 @@ The contract is classified as upgradable through GenLayer Root Slot. Any upgrade
 ## Known limitations
 
 - The fixture registry and three payout tiers are intentionally narrow and do not support arbitrary marketplace listings.
-- The candidate repository contains order-`0` Rolex/Casio match, partial, mismatch, and injection receipts plus exact receipts for orders `3`, `4`, `5`, and `6`. Presence in the repository or public fixture route is not proof of registration or successful live settlement. Every receipt is valid only for its embedded order ID, item ID, publisher ID, and nonce; any other order requires a newly published receipt.
+- The repository contains order-`0` Rolex/Casio match, partial, mismatch, and injection receipts plus exact receipts for orders `1`, `3`, `4`, `5`, and `6`. Presence in the repository or public fixture route is not proof of registration or successful live settlement. Every receipt is valid only for its embedded order ID, item ID, publisher ID, and nonce; any other order requires a newly published receipt.
 - There is no mutual cancellation path.
 - Evidence bytes are content-addressed by SHA-256 but are not stored in a durable decentralized storage network and may later disappear from their URLs.
-- Prior live evidence covers 0% and 100% dispute outcomes, buyer-confirmed release, and expired recovery. It remains evidence for the prior deployed source only.
-- Repeated live 50% attempts finalized as `MAJORITY_DISAGREE` and exposed the validator guard corrected by this candidate; a successful 50% settlement remains pending candidate deployment.
+- Historical evidence covers 0% and 100% dispute outcomes, buyer-confirmed release, and expired recovery. Candidate-scoped evidence currently proves exact-ID creation, issuer registration, and a finalized 100% material-mismatch settlement.
+- A successful candidate-scoped 50% settlement remains pending publication and registration of the new immutable order-`1` minor-condition receipt. The already-used order-`0` receipt is retained unchanged because its missing original box can reasonably be classified as material for the listed collectible.
 - The frontend currently depends on an injected EIP-1193 wallet. Consensus is polled through a bounded-retry, same-origin Vercel proxy to the official Studionet RPC; selected orders are refreshed only on explicit loads and transaction lifecycle events so idle tabs do not consume the shared RPC quota. The proxy is not a separate source of chain truth.
 
 See [ROADMAP.md](ROADMAP.md) for deployment verification, durable evidence storage, observability, cancellation policy, and controlled pilot plans.

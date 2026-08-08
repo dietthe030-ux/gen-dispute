@@ -1,6 +1,6 @@
 # Project Roadmap
 
-This roadmap reflects the local candidate and historical evidence from the prior Studionet deployment reviewed on August 8, 2026. It claims no users, traction, or partnerships. Historical live evidence verifies 0% and 100% dispute outcomes, buyer-confirmed release, and expired recovery on the prior deployment. A successful 50% settlement, candidate deployment, and matching public frontend remain pending.
+This roadmap reflects the candidate deployed on Studionet and evidence reviewed through August 9, 2026. It claims no users, traction, or partnerships. Historical live evidence verifies 0% and 100% dispute outcomes, buyer-confirmed release, and expired recovery. Candidate-scoped evidence verifies deployment parity, exact-ID order creation, issuer registration, and a 100% material-mismatch settlement. A candidate-scoped 50% settlement remains pending.
 
 ## V1 Delivered
 
@@ -29,11 +29,11 @@ The remediation build includes:
 
 | Area | Evidence |
 | --- | --- |
-| Public source | Public `main` at [dietthe030-ux/gen-dispute](https://github.com/dietthe030-ux/gen-dispute) is the prior revision `29a218fe03808994ac66287620374b1d1f32f3cf`. The current candidate is local and has not been pushed. |
+| Public source | [dietthe030-ux/gen-dispute](https://github.com/dietthe030-ux/gen-dispute) contains the release source on `main`. |
 | Local contract verification | 48/48 tests pass, including the live-shaped `PARTIAL_MISMATCH + included_items: UNKNOWN` validator regression as well as issuer authorization, replay rejection, evidence binding, settlement, recovery, and Root Slot authorization. |
-| Local frontend verification | 46/46 tests pass, including explicit provider selection, same-origin Studionet RPC retries, rate-limit preservation, order-scoped transaction attribution, terminal-state reconciliation after transient RPC polling failure, settled-order action messaging, concurrent returned-order decoding, mandatory reconnect signatures, live-shaped post-quorum receipt handling, issuer-registration calldata, and proof that the buyer UI exposes neither outcome presets nor evidence URL inputs; Oxlint, TypeScript compilation, and the Vite production build pass. |
-| Prior public release | [gen-dispute.vercel.app](https://gen-dispute.vercel.app) targets the prior replacement contract and does not publish the current candidate. The older [`0x1E877E7B333D5371a75d2EF995763bcdabaeB9cE`](https://explorer-studio.genlayer.com/address/0x1E877E7B333D5371a75d2EF995763bcdabaeB9cE) deployment remains historical V1 evidence only. |
-| Current live deployment | [`0xd5DBaE8c1A1B2A8F34dba3e4AdC62f9263EaB53d`](https://explorer-studio.genlayer.com/address/0xd5DBaE8c1A1B2A8F34dba3e4AdC62f9263EaB53d) remains the frontend target and preserves the prior live proofs. It predates the current validator-compatibility fix and is not evidence of the new source until a fresh deployment or authorized upgrade passes source-parity and live checks. |
+| Local frontend verification | 47/47 tests pass, including duplicate injected-provider suppression, explicit provider selection, same-origin Studionet RPC retries, rate-limit preservation, order-scoped transaction attribution, terminal-state reconciliation after transient RPC polling failure, settled-order action messaging, concurrent returned-order decoding, mandatory reconnect signatures, live-shaped post-quorum receipt handling, issuer-registration calldata, and proof that the buyer UI exposes neither outcome presets nor evidence URL inputs; Oxlint, TypeScript compilation, and the Vite production build pass. |
+| Public frontend | [gen-dispute.vercel.app](https://gen-dispute.vercel.app) is configured for the current candidate through its production environment. |
+| Current live deployment | [`0x7cFC1C241B7bb6Cf636551053dcA403B6ceD48E7`](https://explorer-studio.genlayer.com/address/0x7cFC1C241B7bb6Cf636551053dcA403B6ceD48E7) matches the reviewed 38,207-byte LF-only contract source and SHA-256 `21830bd59bf6df93d9314bed3ff27925afdc44dbd7f8509ff72b5d565d412c4d`. |
 
 ### Current limitations
 
@@ -41,8 +41,8 @@ Other current limitations are:
 
 - Listing creation is limited to a small hardcoded fixture registry; the listing URL itself is not fetched.
 - Evidence is limited to project-hosted, byte-hash-pinned demo attestations. The deployment wallet authenticates registrations and is contractually distinct from the parties, but it is not an external logistics or marketplace provider. Exact bytes are not stored permanently.
-- Candidate fixtures include order-`0` Rolex/Casio match, partial, mismatch, and injection receipts plus exact order-bound receipts for orders `3`, `4`, `5`, and `6`. Repository presence does not prove registration or live success; each receipt remains valid only for its embedded order ID, item ID, publisher ID, and nonce.
-- Live evidence covers supervised 0% and 100% outcomes. Repeated 50% attempts exposed a validator guard that rejected an otherwise valid leader result containing `included_items: UNKNOWN`; the local fix is tested but not yet deployed.
+- Fixtures include order-`0` Rolex/Casio match, partial, mismatch, and injection receipts plus exact order-bound receipts for orders `1`, `3`, `4`, `5`, and `6`. Repository presence does not prove registration or live success; each receipt remains valid only for its embedded order ID, item ID, publisher ID, and nonce.
+- Candidate live evidence currently covers a supervised 100% outcome. The new order-`1` receipt is intentionally a separate immutable URL describing a minor, non-material cosmetic condition difference; its 50% settlement remains to be demonstrated.
 - A separate previous test instance contains two funded orders and three undetermined attempts; that state does not migrate to production.
 - There is no mutual cancellation path. Expired recovery returns the seller-funded escrow to the seller.
 - Local contract tests mock web and model results; frontend tests mock the wallet and SDK.
@@ -87,10 +87,10 @@ Current evidence is separated from future targets.
 | Metric | Current evidence | Future target | Measurement |
 | --- | --- | --- | --- |
 | Contract regression reliability | 48/48 local tests pass. | All required checks pass for every release candidate. | Pinned CI logs and reviewed GenVM test output. |
-| Frontend regression reliability | 46/46 tests, lint, and build pass. | All required checks pass on every main-branch change. | CI test, lint, typecheck, and build results. |
-| Source-to-deployment integrity | The live address matches its prior reviewed source, but the current local validator fix is not deployed. | Re-establish exact source/address alignment before release. | Commit hash, deployment transaction, Explorer source, and production environment review. |
-| Transaction success | The prior deployment has successful 0% and 100% dispute outcomes, while repeated 50% attempts finalized as `MAJORITY_DISAGREE`; this sample is too small for a reliability rate and does not prove the candidate source. | At least 95% of wallet-approved supervised writes finalize with accepted consensus, excluding user rejection. | Reconcile frontend submissions with Explorer receipts and execution results. |
-| End-to-end dispute completion | Prior live orders prove 0% and 100% outcomes. A successful 50% settlement remains pending deployment of the tested validator fix. | At least 10 supervised finalized disputes after lifecycle hardening, including evidence for every supported tier. | Explorer transactions and post-transaction contract-state reconciliation. |
+| Frontend regression reliability | 47/47 tests, lint, and build pass. | All required checks pass on every main-branch change. | CI test, lint, typecheck, and build results. |
+| Source-to-deployment integrity | Candidate source/address parity is verified at `0x7cFC…48E7`; the frontend-only release delta requires final exact-revision review after publication. | Preserve exact source/address alignment for every release. | Commit hash, deployment transaction, Explorer source, and production environment review. |
+| Transaction success | Candidate deployment, order creation, issuer registration, and 100% settlement finalized with majority agreement and successful decisive executions; this small supervised sample is not a reliability rate. | At least 95% of wallet-approved supervised writes finalize with accepted consensus, excluding user rejection. | Reconcile frontend submissions with Explorer receipts and execution results. |
+| End-to-end dispute completion | Candidate order `0` proves the 100% path. Historical deployments prove 0%, buyer-confirmed release, and expired recovery. A candidate-scoped 50% settlement remains pending. | At least 10 supervised finalized disputes after lifecycle hardening, including evidence for every supported tier. | Explorer transactions and post-transaction contract-state reconciliation. |
 | Order selection correctness | A concurrent-creation regression proves that the app uses the returned ID even when the global count advances to 12. | Zero incorrect post-create selections during the pilot. | Leader-result payload decoding tests and consent-based pilot issue logs. |
 | Fund safety | Replacement order `0` records buyer payout `0.1 GEN`, seller payout `0`, and terminal `PAID_OUT` state. Historical V1 has a zero contract balance; a separate test instance still holds `0.20 GEN` across two open orders. | Zero unreconciled production balances and a documented result for every terminal and recovery state. | Contract balance reconciliation, state monitoring, and incident records. |
 | Initial reach | No verified users or community count. | 25 qualified pilot wallets and 10 participants completing a second supported flow within 30 days. | Deduplicated opt-in pilot cohorts excluding team and automated wallets. |

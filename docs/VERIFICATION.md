@@ -8,20 +8,20 @@
 | Submission category | Project |
 | Prior anonymous-reviewed commit | `d1cf6a41f956ee7566d8a7dcb353a8b62e1b6b72` (`APPROVED`, superseded by LF-only source normalization) |
 | Prior reviewed contract SHA-256 | `22d16b89b97f9570107adc76fe7d9f212641a7b04b0611d1b872bf47911cb6ed` |
-| Current PRE_DEPLOY status | Pending fresh anonymous review for the normalized source hash |
+| Contract PRE_DEPLOY status | `APPROVED` for commit `0d13b529e07e82a3679f593364881c9232789b5f` and normalized contract SHA-256 `21830bd59bf6df93d9314bed3ff27925afdc44dbd7f8509ff72b5d565d412c4d` |
 | Exact reviewed revision | Supplied by `git rev-parse HEAD` in each checkpoint package; it is not self-embedded because editing this file changes the commit hash. |
 | Current candidate source SHA-256 | `21830bd59bf6df93d9314bed3ff27925afdc44dbd7f8509ff72b5d565d412c4d` |
-| Current candidate deployment status | Not deployed; fresh deployment or authorized upgrade required |
-| Public `main` revision | `29a218fe03808994ac66287620374b1d1f32f3cf` (prior source; candidate not pushed) |
+| Current candidate deployment status | Deployed and source-parity verified; frontend-only release delta requires final exact-revision review |
+| Public `main` revision | The release revision returned by `git rev-parse HEAD`; this file does not self-embed the commit that contains it |
 | Prior deployed source SHA-256 | `9b1cece7f2feb3af52817bce8e0be62d02f5e493da1671557fa6269faca35a23` |
 | Network | GenLayer Studionet, chain ID `61999` |
 | Deployment classification | Upgradable through GenLayer Root Slot |
 | Selected deployer/upgrader | `0xbf90af1bc61314775d57b641b89c1f702a93b40d` |
-| Replacement contract | `0xd5DBaE8c1A1B2A8F34dba3e4AdC62f9263EaB53d` |
-| Deployment transaction | `0x13c21f3c5d5aea282fda77c0c8d503cee8c1aff2093e6ca0b5efc11224e4a73e` |
+| Current contract | `0x7cFC1C241B7bb6Cf636551053dcA403B6ceD48E7` |
+| Deployment transaction | `0x93d77018ef4e1bd384eeaee738a96ea7564317a610ca371d3dfcfa12b1a893a9` |
 | Local gate audit | `PASS` |
 
-The recorded Studionet deployment is `FINALIZED`, has successful GenVM execution and majority agreement, and matches the prior deployed source hash above. It does not contain the current validator-compatibility fix. The current candidate must receive a new address or authorized upgrade, source-parity verification, and fresh live consensus evidence before release.
+The current Studionet deployment is `FINALIZED`, has successful GenVM execution and majority agreement, and decodes to 38,207 LF-only source bytes with SHA-256 `21830bd59bf6df93d9314bed3ff27925afdc44dbd7f8509ff72b5d565d412c4d`. RPC readbacks return the selected wallet for both `get_upgrader()` and `get_evidence_issuer()`. The current frontend-only delta does not change those contract bytes.
 
 ## Reviewer-requested remediation
 
@@ -97,11 +97,11 @@ The initial `OPEN` buyer flow exposes only the reason field even when no receipt
 
 ## Deployment and recovery gate
 
-The prior source completed its recorded deployment checks. The current candidate source hash has changed to fix a live validator-compatibility defect and therefore requires a fresh exact-revision review and deployment gate before it can replace the live baseline.
+The current LF-normalized contract received exact-hash `PRE_DEPLOY` approval, was deployed to a new Studionet instance, and passed source-parity and role readbacks. The release delta after deployment changes frontend provider discovery, tests, fixtures, and documentation only; it does not change the deployed contract bytes.
 
-An attempted deployment at `0x6A480D0350ACc67C3667F54933839Ddb6d0D4d51` (`0x82a702dccaf573da9b8b3ba14b929c5d6ea95dbead570c39acc0c8b98c39b6be`) finalized with majority agreement, successful execution, correct role readbacks, and zero orders, but it is not an accepted candidate deployment. Studio normalized 96 mixed CRLF line endings to LF, changing the deployed byte hash from the anonymous-approved `22d16b89b97f9570107adc76fe7d9f212641a7b04b0611d1b872bf47911cb6ed` to `21830bd59bf6df93d9314bed3ff27925afdc44dbd7f8509ff72b5d565d412c4d`. The normalized text is line-for-line identical, but exact-hash approval is required. The repository now enforces LF for the contract, and a fresh `PRE_DEPLOY` review must precede a new deployment instance.
+The diagnostic deployment at `0x6A480D0350ACc67C3667F54933839Ddb6d0D4d51` (`0x82a702dccaf573da9b8b3ba14b929c5d6ea95dbead570c39acc0c8b98c39b6be`) exposed Studio's LF normalization of the earlier mixed-line-ending source. The repository then enforced LF, fresh review approved SHA-256 `21830bd59bf6df93d9314bed3ff27925afdc44dbd7f8509ff72b5d565d412c4d`, and the accepted candidate was deployed only after that approval. The diagnostic instance is retained solely for the isolated upgrade rehearsal.
 
-### Current candidate draft deployment manifest
+### Current candidate deployment manifest
 
 | Field | Value |
 | --- | --- |
@@ -115,11 +115,11 @@ An attempted deployment at `0x6A480D0350ACc67C3667F54933839Ddb6d0D4d51` (`0x82a7
 | Deployment classification | `UPGRADABLE` |
 | Selected deployer/upgrader/evidence issuer | `0xbf90af1bc61314775d57b641b89c1f702a93b40d` |
 | Linked contracts | None |
-| Contract address |  |
-| Deployment transaction |  |
-| Frontend update | Only after `FINALIZED`, execution `SUCCESS`, source parity, and role readbacks are verified |
+| Contract address | `0x7cFC1C241B7bb6Cf636551053dcA403B6ceD48E7` |
+| Deployment transaction | `0x93d77018ef4e1bd384eeaee738a96ea7564317a610ca371d3dfcfa12b1a893a9` |
+| Frontend update | Release frontend configured for this verified address through Vercel production environment |
 
-The recovery runbooks below apply to this candidate after its address and deployment transaction are recorded. Until then, the prior live contract remains isolated from the candidate release.
+The candidate deployment, source parity, and role readbacks are verified. The prior live contract remains isolated as historical evidence.
 
 ### Prior live deployment manifest
 
@@ -137,7 +137,7 @@ The recovery runbooks below apply to this candidate after its address and deploy
 | Linked contracts | None |
 | Contract address | `0xd5DBaE8c1A1B2A8F34dba3e4AdC62f9263EaB53d` |
 | Deployment transaction | `0x13c21f3c5d5aea282fda77c0c8d503cee8c1aff2093e6ca0b5efc11224e4a73e` |
-| Production frontend | `https://gen-dispute.vercel.app` targets this prior live contract |
+| Production frontend | Historical target before the current candidate release |
 
 The exact candidate revision is supplied by `git rev-parse HEAD` in each review package rather than embedded in this file. The manifest above remains evidence for the prior deployed source only.
 
@@ -147,11 +147,20 @@ The exact candidate revision is supplied by `git rev-parse HEAD` in each review 
 
 **Studionet/network-state reset:** treat the prior address and state as unrecoverable. Redeploy the exact recorded source with no constructor arguments from the selected wallet, verify `FINALIZED`, execution `SUCCESS`, deployed-source parity, and `get_upgrader()` readback, rerun the full live proof matrix, then update the frontend address and all deployment documentation. Do not present the previous address as current evidence.
 
-The prior deployment and its proof matrix below do not satisfy `POST_DEPLOY_TEST` for the current candidate. Candidate deployment, source parity, role readbacks, live settlement, frontend integration, and a candidate-scoped live upgrade rehearsal remain pending.
+Candidate deployment, source parity, role readbacks, exact-ID order creation, issuer registration, and a 100% live settlement are verified below. A candidate-scoped 50% settlement, publication of the matching frontend, and final exact-revision review remain pending at this checkpoint.
 
-Local `PRE_DEPLOY` coverage proves that `upgrade(new_code)` rejects a non-upgrader and empty code and accepts a non-empty payload from the recorded upgrader. A separate historical Studionet rehearsal also exists at [`0x9627b7944bf1B8c54969391075E8c856a22dD249`](https://explorer-studio.genlayer.com/address/0x9627b7944bf1B8c54969391075E8c856a22dD249): the authorized transaction [`0xd46d339f6ade5da9e17cda5469f8f88c0cecc2d92deb96f71ca73a1ac28652cf`](https://explorer-studio.genlayer.com/tx/0xd46d339f6ade5da9e17cda5469f8f88c0cecc2d92deb96f71ca73a1ac28652cf) is `FINALIZED`, `MAJORITY_AGREE`, and execution `SUCCESS`; the unauthorized transaction [`0x2530f4c1c8651fafdfa4d3ecea70d9b5f1ee023d7fcc6a8492bb653bd9805f97`](https://explorer-studio.genlayer.com/tx/0x2530f4c1c8651fafdfa4d3ecea70d9b5f1ee023d7fcc6a8492bb653bd9805f97) finalized with an `Unauthorized address` rollback. Because this rehearsal predates the current candidate, it is historical supporting evidence only and is not marked as candidate completion.
+Local coverage proves that `upgrade(new_code)` rejects a non-upgrader and empty code and accepts a non-empty payload from the recorded upgrader. The exact candidate source was also rehearsed on isolated contract [`0x6A480D0350ACc67C3667F54933839Ddb6d0D4d51`](https://explorer-studio.genlayer.com/address/0x6A480D0350ACc67C3667F54933839Ddb6d0D4d51): authorized transaction [`0x60303e3389e6c95ca899b2aa26cfdc630a36890f4cb64d9e03847609e3cabfc8`](https://explorer-studio.genlayer.com/tx/0x60303e3389e6c95ca899b2aa26cfdc630a36890f4cb64d9e03847609e3cabfc8) is `FINALIZED`, `MAJORITY_AGREE`, and execution `SUCCESS`; unauthorized seller transaction [`0x3f7f75c78e54b9af8096328241fac9c72ecbd35dce6bb45a7b4083cbe098a883`](https://explorer-studio.genlayer.com/tx/0x3f7f75c78e54b9af8096328241fac9c72ecbd35dce6bb45a7b4083cbe098a883) finalized with an `Unauthorized address` rollback. Source hash and role readbacks remained unchanged.
 
-### Replacement live evidence collected
+### Current candidate live evidence
+
+- Deployment: [`0x93d77018ef4e1bd384eeaee738a96ea7564317a610ca371d3dfcfa12b1a893a9`](https://explorer-studio.genlayer.com/tx/0x93d77018ef4e1bd384eeaee738a96ea7564317a610ca371d3dfcfa12b1a893a9) — `FINALIZED`, `MAJORITY_AGREE`, decisive execution `SUCCESS`; contract `0x7cFC1C241B7bb6Cf636551053dcA403B6ceD48E7`.
+- Deployed-source parity: 38,207 LF-only bytes, SHA-256 `21830bd59bf6df93d9314bed3ff27925afdc44dbd7f8509ff72b5d565d412c4d`; upgrader and evidence issuer both read back as `0xbf90af1bc61314775d57b641b89c1f702a93b40d`.
+- Order `0` creation: [`0xf490087d737879ea0845da5b2f4c8f2bd2126a372428c60b1fdbe70d76b84b35`](https://explorer-studio.genlayer.com/tx/0xf490087d737879ea0845da5b2f4c8f2bd2126a372428c60b1fdbe70d76b84b35) — `FINALIZED`, `MAJORITY_AGREE`, decisive executions `SUCCESS`; exact returned order ID `0`, seller `0x0d4b...d563`, buyer `0x7885...2339`, escrow `0.1 GEN`.
+- Issuer receipt registration: [`0x779d661cec3552080370f68c57222e32baa55034c3bd0b310e4c2e4b147e4873`](https://explorer-studio.genlayer.com/tx/0x779d661cec3552080370f68c57222e32baa55034c3bd0b310e4c2e4b147e4873) — `FINALIZED`, `MAJORITY_AGREE`, decisive executions `SUCCESS`; URL, lowercase SHA-256, nonce, and observation time match order readback.
+- Material-mismatch dispute: [`0xec8d9abce9a3d72a7556d5f3e9769f875874942b53ba8faae9b4010af8b362a1`](https://explorer-studio.genlayer.com/tx/0xec8d9abce9a3d72a7556d5f3e9769f875874942b53ba8faae9b4010af8b362a1) — buyer sender, `FINALIZED`, `MAJORITY_AGREE`, decisive executions `SUCCESS`; readback `PAID_OUT`, `MATERIAL_MISMATCH`, 100% buyer refund, buyer payout `0.1 GEN`, seller payout `0`.
+- The 100% outcome is consistent with an original collectible box being absent. That used receipt remains immutable. A separate order-`1` receipt describes a shallow, explicitly non-material cosmetic condition difference for the pending 50% smoke test.
+
+### Prior replacement live evidence collected
 
 - Deployment: [`0x13c21f3c5d5aea282fda77c0c8d503cee8c1aff2093e6ca0b5efc11224e4a73e`](https://explorer-studio.genlayer.com/tx/0x13c21f3c5d5aea282fda77c0c8d503cee8c1aff2093e6ca0b5efc11224e4a73e) — `FINALIZED`, `MAJORITY_AGREE`, decisive executions `SUCCESS`.
 - Order `0` creation: [`0x47820c92ffe2cd7bd5820faca69cf98ad019b5727eb6c2b2f461b847100747f1`](https://explorer-studio.genlayer.com/tx/0x47820c92ffe2cd7bd5820faca69cf98ad019b5727eb6c2b2f461b847100747f1) — seller `0x0d4b...d563`, buyer `0x7885...2339`, `0.1 GEN`, `FINALIZED`, `MAJORITY_AGREE`, leader and three agreeing validators `SUCCESS`.

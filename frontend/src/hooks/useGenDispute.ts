@@ -273,11 +273,18 @@ export const useGenDispute = () => {
   const [walletOptions, setWalletOptions] = useState<WalletOption[]>([])
   const [activeProvider, setActiveProvider] = useState<any>(null)
   const walletProviders = useRef(new Map<string, any>())
+  const walletProviderNames = useRef(new Set<string>())
 
   useEffect(() => {
     const addProvider = (id: string, name: string, provider: any) => {
-      if (!provider || [...walletProviders.current.values()].includes(provider)) return
+      const normalizedName = name.trim().toLowerCase()
+      if (
+        !provider ||
+        walletProviderNames.current.has(normalizedName) ||
+        [...walletProviders.current.values()].includes(provider)
+      ) return
       walletProviders.current.set(id, provider)
+      walletProviderNames.current.add(normalizedName)
       setWalletOptions((current) =>
         current.some((wallet) => wallet.id === id)
           ? current

@@ -29,7 +29,7 @@ The connect action shows the injected wallets detected in the browser instead of
 
 ## Contract configuration
 
-The public frontend currently targets `0xd5DBaE8c1A1B2A8F34dba3e4AdC62f9263EaB53d`, which predates the validator-compatibility fix in the current contract source. Keep `.env` gitignored and do not change the production address until a new deployment or authorized upgrade has passed source-parity and live checks. Never use a placeholder address.
+The production frontend targets verified Studionet contract `0x7cFC1C241B7bb6Cf636551053dcA403B6ceD48E7` through Vercel environment configuration. Keep `.env` gitignored and never commit credentials or placeholder addresses.
 
 ## Commands
 
@@ -43,7 +43,7 @@ npm run build
 
 Current local verification:
 
-- 46 frontend tests passed.
+- 47 frontend tests passed, including duplicate injected-provider suppression.
 - Oxlint completed with zero errors.
 - TypeScript compilation and the Vite production build succeeded.
 - The production build reports a non-blocking large-chunk warning.
