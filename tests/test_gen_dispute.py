@@ -1560,6 +1560,7 @@ def test_public_evidence_fixtures_match_contract_listing():
         "fixture_evidence_casio_partial.html",
         "fixture_evidence_rolex_instead_of_casio.html",
         "fixture_prompt_injection_casio.html",
+        "order-3-rolex-match.html",
     ]
 
     root_fixtures = project_root / "fixtures"
@@ -1603,6 +1604,12 @@ def test_public_evidence_fixtures_match_contract_listing():
     assert "No Casio digital watch was delivered" in rolex_for_casio
     assert "matching the listing" not in casio_match.lower()
     assert "matching the listing" not in rolex_for_casio.lower()
+
+    order_3_match = (root_fixtures / "order-3-rolex-match.html").read_text(
+        encoding="utf-8"
+    )
+    assert '"order_id":3' in order_3_match
+    assert '"evidence_nonce":"ORDER_3_ROLEX_MATCH_V1"' in order_3_match
 
     for url in FIXTURE_BY_URL:
         source = fixture_bytes(url).decode("utf-8")
