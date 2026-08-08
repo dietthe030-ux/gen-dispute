@@ -1561,6 +1561,7 @@ def test_public_evidence_fixtures_match_contract_listing():
         "fixture_evidence_rolex_instead_of_casio.html",
         "fixture_prompt_injection_casio.html",
         "order-3-rolex-match.html",
+        "order-4-rolex-partial.html",
     ]
 
     root_fixtures = project_root / "fixtures"
@@ -1610,6 +1611,12 @@ def test_public_evidence_fixtures_match_contract_listing():
     )
     assert '"order_id":3' in order_3_match
     assert '"evidence_nonce":"ORDER_3_ROLEX_MATCH_V1"' in order_3_match
+
+    order_4_partial = (root_fixtures / "order-4-rolex-partial.html").read_text(
+        encoding="utf-8"
+    )
+    assert '"order_id":4' in order_4_partial
+    assert '"evidence_nonce":"ORDER_4_ROLEX_PARTIAL_V1"' in order_4_partial
 
     for url in FIXTURE_BY_URL:
         source = fixture_bytes(url).decode("utf-8")
