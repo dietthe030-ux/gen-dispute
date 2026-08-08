@@ -9,10 +9,11 @@
 | Prior anonymous-reviewed commit | `d1cf6a41f956ee7566d8a7dcb353a8b62e1b6b72` (`APPROVED`, superseded by LF-only source normalization) |
 | Prior reviewed contract SHA-256 | `22d16b89b97f9570107adc76fe7d9f212641a7b04b0611d1b872bf47911cb6ed` |
 | Contract PRE_DEPLOY status | `APPROVED` for commit `0d13b529e07e82a3679f593364881c9232789b5f` and normalized contract SHA-256 `21830bd59bf6df93d9314bed3ff27925afdc44dbd7f8509ff72b5d565d412c4d` |
-| Exact reviewed revision | Supplied by `git rev-parse HEAD` in each checkpoint package; it is not self-embedded because editing this file changes the commit hash. |
+| Prior final-review result | Commit `b51817eb573e850d9e674075ced1587ffe230ff9`: `CHANGES REQUIRED`; superseded after completing the current-deployment proof matrix, correcting attribution, and adding the repository license. |
+| Exact release revision | The public annotated tag and GitHub Release [`gendispute-v1-final`](https://github.com/dietthe030-ux/gen-dispute/releases/tag/gendispute-v1-final) bind the final commit after this self-referential document is committed. The release notes state the literal SHA and Vercel deployment provenance. |
 | Current candidate source SHA-256 | `21830bd59bf6df93d9314bed3ff27925afdc44dbd7f8509ff72b5d565d412c4d` |
-| Current candidate deployment status | Deployed, source-parity verified, and exercised through finalized 50% and 100% settlements; final exact-revision review remains |
-| Public `main` revision | The release revision returned by `git rev-parse HEAD`; this file does not self-embed the commit that contains it |
+| Current candidate deployment status | Deployed, source-parity verified, and exercised through every advertised write path and critical terminal/retry branch |
+| Public `main` revision | Must equal the commit targeted by `gendispute-v1-final`; verify with GitHub and `git rev-parse gendispute-v1-final^{commit}` |
 | Prior deployed source SHA-256 | `9b1cece7f2feb3af52817bce8e0be62d02f5e493da1671557fa6269faca35a23` |
 | Network | GenLayer Studionet, chain ID `61999` |
 | Deployment classification | Upgradable through GenLayer Root Slot |
@@ -21,7 +22,7 @@
 | Deployment transaction | `0x93d77018ef4e1bd384eeaee738a96ea7564317a610ca371d3dfcfa12b1a893a9` |
 | Local gate audit | `PASS` |
 
-The current Studionet deployment is `FINALIZED`, has successful GenVM execution and majority agreement, and decodes to 38,207 LF-only source bytes with SHA-256 `21830bd59bf6df93d9314bed3ff27925afdc44dbd7f8509ff72b5d565d412c4d`. RPC readbacks return the selected wallet for both `get_upgrader()` and `get_evidence_issuer()`. The current frontend-only delta does not change those contract bytes.
+The current Studionet deployment is `FINALIZED`, has successful GenVM execution and majority agreement, and decodes to 38,207 LF-only source bytes with SHA-256 `21830bd59bf6df93d9314bed3ff27925afdc44dbd7f8509ff72b5d565d412c4d`. RPC readbacks return the selected wallet for both `get_upgrader()` and `get_evidence_issuer()`. The release delta does not change those contract bytes.
 
 ## Reviewer-requested remediation
 
@@ -67,6 +68,8 @@ Results:
 - Whitespace error check: passed.
 - Known non-blocking output: Vite reports a production chunk above 500 kB.
 
+Dependency triage on the release tree reports five transitive advisories and no direct vulnerable package. `nanoid`, `postcss`, and `undici` are dev-only Vite/Vitest/jsdom paths. `brace-expansion` and `js-yaml` appear under the production install only because `genlayer-js@1.1.8` brings ESLint/import-plugin peer tooling; the application does not import those packages, and their package identifiers are absent from the built production assets. No forced override or audit fix is applied because runtime reachability was not demonstrated and changing SDK peer dependencies without compatibility evidence would add release risk. This remains a disclosed dependency-maintenance item.
+
 Contract tests use an isolated WSL environment with `genlayer-test==0.29.2`. Web, LLM, wallet, and SDK behavior is mocked locally; these results do not substitute for Studionet transactions.
 
 ## Contract safety coverage
@@ -109,7 +112,8 @@ The diagnostic deployment at `0x6A480D0350ACc67C3667F54933839Ddb6d0D4d51` (`0x82
 | Chain ID | `61999` |
 | RPC | `https://studio.genlayer.com/api` |
 | Contract source | `contracts/gen_dispute.py` |
-| Source revision | Supplied by `git rev-parse HEAD` in the review package |
+| Approved contract revision | `0d13b529e07e82a3679f593364881c9232789b5f` |
+| Final repository revision | Public tag and release `gendispute-v1-final` resolve to the exact final commit without changing its tree |
 | Source SHA-256 | `21830bd59bf6df93d9314bed3ff27925afdc44dbd7f8509ff72b5d565d412c4d` |
 | Constructor arguments | None (`__init__(self)`) |
 | Deployment classification | `UPGRADABLE` |
@@ -118,6 +122,7 @@ The diagnostic deployment at `0x6A480D0350ACc67C3667F54933839Ddb6d0D4d51` (`0x82
 | Contract address | `0x7cFC1C241B7bb6Cf636551053dcA403B6ceD48E7` |
 | Deployment transaction | `0x93d77018ef4e1bd384eeaee738a96ea7564317a610ca371d3dfcfa12b1a893a9` |
 | Frontend update | Release frontend configured for this verified address through Vercel production environment |
+| Public frontend provenance | Stable production at [gen-dispute.vercel.app](https://gen-dispute.vercel.app); the public GitHub Release records the exact commit, Vercel deployment ID, production alias, and commit-bound public alias after final publication |
 
 The candidate deployment, source parity, and role readbacks are verified. The prior live contract remains isolated as historical evidence.
 
@@ -139,7 +144,7 @@ The candidate deployment, source parity, and role readbacks are verified. The pr
 | Deployment transaction | `0x13c21f3c5d5aea282fda77c0c8d503cee8c1aff2093e6ca0b5efc11224e4a73e` |
 | Production frontend | Historical target before the current candidate release |
 
-The exact candidate revision is supplied by `git rev-parse HEAD` in each review package rather than embedded in this file. The manifest above remains evidence for the prior deployed source only.
+The prior manifest remains historical evidence only. The current release revision is resolved through the public `gendispute-v1-final` tag and GitHub Release described at the top of this document.
 
 ### Recovery runbooks
 
@@ -147,7 +152,7 @@ The exact candidate revision is supplied by `git rev-parse HEAD` in each review 
 
 **Studionet/network-state reset:** treat the prior address and state as unrecoverable. Redeploy the exact recorded source with no constructor arguments from the selected wallet, verify `FINALIZED`, execution `SUCCESS`, deployed-source parity, and `get_upgrader()` readback, rerun the full live proof matrix, then update the frontend address and all deployment documentation. Do not present the previous address as current evidence.
 
-Candidate deployment, source parity, role readbacks, exact-ID order creation, issuer registration, matching production frontend publication, and 50% and 100% live settlements are verified below. Final exact-revision review remains pending at this checkpoint.
+Candidate deployment, source parity, role readbacks, exact-ID order creation, issuer registration, matching production frontend publication, all three payout tiers, fail-closed retry, buyer confirmation, and expired recovery are verified below. Final exact-revision publication and re-review remain pending at this checkpoint.
 
 Local coverage proves that `upgrade(new_code)` rejects a non-upgrader and empty code and accepts a non-empty payload from the recorded upgrader. The exact candidate source was also rehearsed on isolated contract [`0x6A480D0350ACc67C3667F54933839Ddb6d0D4d51`](https://explorer-studio.genlayer.com/address/0x6A480D0350ACc67C3667F54933839Ddb6d0D4d51): authorized transaction [`0x60303e3389e6c95ca899b2aa26cfdc630a36890f4cb64d9e03847609e3cabfc8`](https://explorer-studio.genlayer.com/tx/0x60303e3389e6c95ca899b2aa26cfdc630a36890f4cb64d9e03847609e3cabfc8) is `FINALIZED`, `MAJORITY_AGREE`, and execution `SUCCESS`; unauthorized seller transaction [`0x3f7f75c78e54b9af8096328241fac9c72ecbd35dce6bb45a7b4083cbe098a883`](https://explorer-studio.genlayer.com/tx/0x3f7f75c78e54b9af8096328241fac9c72ecbd35dce6bb45a7b4083cbe098a883) finalized with an `Unauthorized address` rollback. Source hash and role readbacks remained unchanged.
 
@@ -159,8 +164,43 @@ Local coverage proves that `upgrade(new_code)` rejects a non-upgrader and empty 
 - Issuer receipt registration: [`0x779d661cec3552080370f68c57222e32baa55034c3bd0b310e4c2e4b147e4873`](https://explorer-studio.genlayer.com/tx/0x779d661cec3552080370f68c57222e32baa55034c3bd0b310e4c2e4b147e4873) — `FINALIZED`, `MAJORITY_AGREE`, decisive executions `SUCCESS`; URL, lowercase SHA-256, nonce, and observation time match order readback.
 - Material-mismatch dispute: [`0xec8d9abce9a3d72a7556d5f3e9769f875874942b53ba8faae9b4010af8b362a1`](https://explorer-studio.genlayer.com/tx/0xec8d9abce9a3d72a7556d5f3e9769f875874942b53ba8faae9b4010af8b362a1) — buyer sender, `FINALIZED`, `MAJORITY_AGREE`, decisive executions `SUCCESS`; readback `PAID_OUT`, `MATERIAL_MISMATCH`, 100% buyer refund, buyer payout `0.1 GEN`, seller payout `0`.
 - The 100% outcome is consistent with an original collectible box being absent. That used receipt remains immutable.
+- Order `1` creation: [`0x24ae5f2466cbd6aea0e02c1f314f90c8fd084a71bfe072461f81d1529ab72956`](https://explorer-studio.genlayer.com/tx/0x24ae5f2466cbd6aea0e02c1f314f90c8fd084a71bfe072461f81d1529ab72956) — seller sender, `0.1 GEN`, `FINALIZED`, `MAJORITY_AGREE`, decisive execution `SUCCESS`; returned order ID `1`.
 - Order `1` issuer receipt registration: [`0x7128b0dcd19da2f33b6e683db25d785d87e56d5d5d69c38b5f1470658f2c0a20`](https://explorer-studio.genlayer.com/tx/0x7128b0dcd19da2f33b6e683db25d785d87e56d5d5d69c38b5f1470658f2c0a20) — `FINALIZED`, `MAJORITY_AGREE`, decisive executions `SUCCESS`; readback binds order `1` to receipt SHA-256 `9df592f5661674af9aec9fad18cb8f23ff905168e27138d255986cde33946f4d` and nonce `ORDER_1_ROLEX_MINOR_CONDITION_V1`.
 - Partial-mismatch dispute: [`0x8a30903d094b1855ec6730cae7b2c38ed392863289961f97f7b29910a8a0a94f`](https://explorer-studio.genlayer.com/tx/0x8a30903d094b1855ec6730cae7b2c38ed392863289961f97f7b29910a8a0a94f) — buyer sender, `FINALIZED`, `MAJORITY_AGREE`, all four decisive executions `SUCCESS`; readback `PAID_OUT`, `PARTIAL_MISMATCH`, refund tier `50`, escrow `0.1 GEN`, buyer payout `0.05 GEN`, seller payout `0.05 GEN`, and no recorded error.
+- Order `2` creation: [`0x4373f666a4a70c6a4f05d832164fa423c9a6dc367f72a58c380713574aadc107`](https://explorer-studio.genlayer.com/tx/0x4373f666a4a70c6a4f05d832164fa423c9a6dc367f72a58c380713574aadc107) — seller sender, `0.1 GEN`, `FINALIZED`, `MAJORITY_AGREE`, all four decisive executions `SUCCESS`; returned order ID `2` and `OPEN` readback.
+- Order `2` buyer confirmation: [`0x11d5c4c9a7238061c79c9561093d7412d978117c8aa337683e3e9c830caf1a65`](https://explorer-studio.genlayer.com/tx/0x11d5c4c9a7238061c79c9561093d7412d978117c8aa337683e3e9c830caf1a65) — buyer sender, `FINALIZED`, `MAJORITY_AGREE`, all four decisive executions `SUCCESS`; readback `PAID_OUT`, `BUYER_CONFIRMED`, buyer payout `0`, seller payout `0.1 GEN`.
+- Order `3` creation: [`0x07f3f100c5f20a836fe3109f5650f12c6ff09bcbf50c6d41967964b7b4868ba7`](https://explorer-studio.genlayer.com/tx/0x07f3f100c5f20a836fe3109f5650f12c6ff09bcbf50c6d41967964b7b4868ba7) — seller sender, `0.1 GEN`, `FINALIZED`, `MAJORITY_AGREE`, all four decisive executions `SUCCESS`; returned order ID `3`, no registered receipt, and `OPEN` readback.
+- Order `3` first dispute: [`0xa93191c6d0576ff0751dcab40989d2de15624f5f25976046806180ced87b258a`](https://explorer-studio.genlayer.com/tx/0xa93191c6d0576ff0751dcab40989d2de15624f5f25976046806180ced87b258a) — buyer sender, `FINALIZED`, `MAJORITY_AGREE`, all four decisive executions `SUCCESS`; readback `UNDETERMINED`, one attempt used, `0.1 GEN` still locked, both payouts zero, and `No issuer-authenticated evidence receipt is registered`.
+- Order `3` fresh receipt registration: [`0xdc35b021964b0b363426be6388c839eb6e2826c881a0fa220fbe3963efb54bfd`](https://explorer-studio.genlayer.com/tx/0xdc35b021964b0b363426be6388c839eb6e2826c881a0fa220fbe3963efb54bfd) — issuer sender, `FINALIZED`, `MAJORITY_AGREE`, all four decisive executions `SUCCESS`; readback URL, SHA-256 `a8427dd8374a4768a491d4324f72a84b836cf216c88ce83a576eda87db42a3a0`, and nonce `ORDER_3_ROLEX_MATCH_V1` match the immutable receipt.
+- Order `3` retry and 0% settlement: [`0x5ccab3dba913447431953217f325070763c3f6f6693f48f3ef70aec32526e89d`](https://explorer-studio.genlayer.com/tx/0x5ccab3dba913447431953217f325070763c3f6f6693f48f3ef70aec32526e89d) — buyer sender, `FINALIZED`, `MAJORITY_AGREE`, all four decisive executions `SUCCESS`; readback `PAID_OUT`, `MATCHES_DESCRIPTION`, refund tier `0`, buyer payout `0`, seller payout `0.1 GEN`. The retained `last_error` is the recorded diagnostic from the first failed-closed attempt, not the terminal outcome.
+- Order `4` creation: [`0x476e6d6d98fb973981ace0b0bbba47b22c4f60258a3b1bbb90d124c230e426f9`](https://explorer-studio.genlayer.com/tx/0x476e6d6d98fb973981ace0b0bbba47b22c4f60258a3b1bbb90d124c230e426f9) — seller sender, `0.1 GEN`, 60-second timeout, `FINALIZED`, `MAJORITY_AGREE`, all four decisive executions `SUCCESS`; returned order ID `4` and `OPEN` readback.
+- Order `4` expired recovery: [`0xe1c958d8e04b8107c66b5df5332f23a5371634c664cdfa9275b0b68b48b8ead4`](https://explorer-studio.genlayer.com/tx/0xe1c958d8e04b8107c66b5df5332f23a5371634c664cdfa9275b0b68b48b8ead4) — seller sender after deadline, `FINALIZED`, `MAJORITY_AGREE`, all four decisive executions `SUCCESS`; readback `PAID_OUT`, `EXPIRED_RECOVERY`, buyer payout `0`, seller payout `0.1 GEN`.
+
+### Consolidated current-deployment proof matrix
+
+| Actor | UI or operational action | Contract method | Live transaction | Final result and readback | Source and regression reference |
+| --- | --- | --- | --- | --- | --- |
+| Seller | Deposit `0.1 GEN` and create an isolated order | `create_order` | [`0x4373…c107`](https://explorer-studio.genlayer.com/tx/0x4373f666a4a70c6a4f05d832164fa423c9a6dc367f72a58c380713574aadc107) | `FINALIZED`, agreement, four successful decisive executions; exact returned ID `2`, `OPEN`, `0.1 GEN` escrow | `GenDispute.create_order`; `test_create_order_positive_escrow`; frontend returned-ID concurrency regression |
+| Evidence issuer | Bind an immutable receipt to one order | `register_evidence_receipt` | [`0xdc35…4bfd`](https://explorer-studio.genlayer.com/tx/0xdc35b021964b0b363426be6388c839eb6e2826c881a0fa220fbe3963efb54bfd) | `FINALIZED`, agreement, four successful decisive executions; order `3` URL/hash/nonce readback matched | `GenDispute.register_evidence_receipt`; `test_only_issuer_can_register_receipts_and_nonce_cannot_replay` |
+| Buyer | Submit without a receipt | `open_dispute` | [`0xa931…258a`](https://explorer-studio.genlayer.com/tx/0xa93191c6d0576ff0751dcab40989d2de15624f5f25976046806180ced87b258a) | `FINALIZED`, agreement, four successful decisive executions; `UNDETERMINED`, zero payout, escrow locked, one retry remains | `GenDispute.open_dispute`; `test_missing_issuer_receipt_is_undetermined_without_payout` |
+| Buyer | Retry after fresh issuer receipt; matching item | `open_dispute` | [`0x5cca…e89d`](https://explorer-studio.genlayer.com/tx/0x5ccab3dba913447431953217f325070763c3f6f6693f48f3ef70aec32526e89d) | `FINALIZED`, agreement, four successful decisive executions; tier 0, seller `0.1 GEN`, `PAID_OUT` | `test_dispute_resolved_tier_0`; `test_retry_preserves_each_evidence_commitment` |
+| Buyer | Dispute a partial mismatch | `open_dispute` | [`0x8a30…a94f`](https://explorer-studio.genlayer.com/tx/0x8a30903d094b1855ec6730cae7b2c38ed392863289961f97f7b29910a8a0a94f) | `FINALIZED`, agreement, four successful decisive executions; tier 50, `0.05/0.05 GEN`, `PAID_OUT` | `test_dispute_resolved_tier_50`; validator partial-mismatch regressions |
+| Buyer | Dispute a material mismatch | `open_dispute` | [`0xec8d…62a1`](https://explorer-studio.genlayer.com/tx/0xec8d9abce9a3d72a7556d5f3e9769f875874942b53ba8faae9b4010af8b362a1) | `FINALIZED`, agreement, successful decisive executions; tier 100, buyer `0.1 GEN`, `PAID_OUT` | `test_dispute_resolved_tier_100`; evidence-binding regressions |
+| Buyer | Confirm correct delivery | `confirm_delivery` | [`0x11d5…1a65`](https://explorer-studio.genlayer.com/tx/0x11d5c4c9a7238061c79c9561093d7412d978117c8aa337683e3e9c830caf1a65) | `FINALIZED`, agreement, four successful decisive executions; `BUYER_CONFIRMED`, seller `0.1 GEN`, `PAID_OUT` | `GenDispute.confirm_delivery`; `test_buyer_can_confirm_delivery_and_release_full_escrow` |
+| Seller | Recover after the recorded deadline | `recover_expired_order` | [`0xe1c9…ead4`](https://explorer-studio.genlayer.com/tx/0xe1c958d8e04b8107c66b5df5332f23a5371634c664cdfa9275b0b68b48b8ead4) | `FINALIZED`, agreement, four successful decisive executions; `EXPIRED_RECOVERY`, seller `0.1 GEN`, `PAID_OUT` | `GenDispute.recover_expired_order`; recovery permission/early-call regressions |
+| Upgrader and unauthorized seller | Rehearse exact-source replacement and authorization rejection on isolated instance | `upgrade` | [Authorized](https://explorer-studio.genlayer.com/tx/0x60303e3389e6c95ca899b2aa26cfdc630a36890f4cb64d9e03847609e3cabfc8) / [rejected](https://explorer-studio.genlayer.com/tx/0x3f7f75c78e54b9af8096328241fac9c72ecbd35dce6bb45a7b4083cbe098a883) | Exact candidate bytes succeeded for the recorded upgrader; unauthorized sender rolled back; source hash/readbacks unchanged | `GenDispute.upgrade`; `test_root_slot_upgrade_is_restricted_to_deployer` |
+
+The first eight rows target the submitted contract `0x7cFC1C241B7bb6Cf636551053dcA403B6ceD48E7`. Upgrade rehearsal intentionally uses isolated instance `0x6A480D0350ACc67C3667F54933839Ddb6d0D4d51` so the submitted escrow state and Root Slot are not mutated during release verification.
+
+### Final-review blocker closure matrix
+
+| Reviewer blocker | Prior failure/root cause | Correction and current contract evidence | Publication/re-test gate |
+| --- | --- | --- | --- |
+| Missing exact-deployment proof matrix | Current address had only 50% and 100% settlement evidence; normal release, recovery, 0%, and retry were historical or absent. | Orders `2`–`4` now prove buyer confirmation, missing-receipt `UNDETERMINED`, issuer registration, successful 0% retry, and expired recovery on `0x7cFC…48E7`; the consolidated matrix links every write and regression. | Re-query each transaction and order readback; verify escrow conservation and recipients. |
+| False current-deployment attribution | README grouped prior-contract confirmation and recovery links under the current deployment. | README now links current-contract transactions `0x11d5…1a65` and `0xe1c9…ead4`; prior-address evidence stays explicitly historical. | Inspect every README link recipient after publication. |
+| Incomplete final manifest | Static wording omitted a public exact-revision binding and order-1 creation. | Public annotated tag/GitHub Release bind the final commit without a self-hash cycle; order-1 creation `0x24ae…2956` and the complete current proof matrix are recorded. | Confirm tag target, release notes, GitHub `main`, and all transaction recipients. |
+| Missing public license | No root license existed. | Root [`LICENSE`](../LICENSE) contains the user-approved MIT License for `dietthe030-ux`. | Confirm GitHub license detection after push. |
+| Protected Vercel deployment URL | The raw Vercel deployment hostname required authentication. | The protected hostname is not used as public evidence. Stable production remains public; the final GitHub Release and GitHub deployment record bind exact commit, Vercel deployment ID, production alias, and a commit-bound public alias. | Open the stable and commit-bound aliases without authentication; compare served assets and contract binding. |
 
 ### Prior replacement live evidence collected
 
