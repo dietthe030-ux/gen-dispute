@@ -9,12 +9,12 @@ GenDispute is a seller-funded GEN escrow prototype for item-not-as-described tra
 | Item | Link | Current status |
 | --- | --- | --- |
 | Web application | [gen-dispute.vercel.app](https://gen-dispute.vercel.app) | Production remediation frontend at `/` with reviewer documentation at `/docs` |
-| Replacement contract | [`0xd5DBaE8c1A1B2A8F34dba3e4AdC62f9263EaB53d`](https://explorer-studio.genlayer.com/address/0xd5DBaE8c1A1B2A8F34dba3e4AdC62f9263EaB53d) | Remediation source deployed on Studionet; dispute settlement, buyer confirmation, and expiry recovery are verified live |
+| Current live contract | [`0xd5DBaE8c1A1B2A8F34dba3e4AdC62f9263EaB53d`](https://explorer-studio.genlayer.com/address/0xd5DBaE8c1A1B2A8F34dba3e4AdC62f9263EaB53d) | Previous reviewed revision; the validator-compatibility fix in the current source requires a fresh deployment or authorized upgrade before the frontend can use it |
 | Source repository | [dietthe030-ux/gen-dispute](https://github.com/dietthe030-ux/gen-dispute) | Public source for the current release |
 | Verification record | [docs/VERIFICATION.md](docs/VERIFICATION.md) | Local remediation evidence and deployment gate status |
 | Network | GenLayer Studionet, chain ID `61999` | RPC `https://studio.genlayer.com/api` |
 
-The replacement deployment transaction [`0x13c21f...e4a73e`](https://explorer-studio.genlayer.com/tx/0x13c21f3c5d5aea282fda77c0c8d503cee8c1aff2093e6ca0b5efc11224e4a73e) is `FINALIZED` with successful GenVM execution and majority agreement. Its deployed source SHA-256 matches `contracts/gen_dispute.py`, and the public Vercel app targets this replacement contract. Remaining live-proof gaps are disclosed below.
+The deployment transaction [`0x13c21f...e4a73e`](https://explorer-studio.genlayer.com/tx/0x13c21f3c5d5aea282fda77c0c8d503cee8c1aff2093e6ca0b5efc11224e4a73e) is `FINALIZED` with successful GenVM execution and majority agreement. The public Vercel app still targets that deployment. Its deployed source predates the current validator-compatibility fix, so it is retained as historical live evidence rather than presented as source-identical to the current release candidate.
 
 ## Trust problem
 
@@ -140,7 +140,7 @@ npm run build
 
 Current local results:
 
-- 47 contract tests passed, including cross-order replay rejection, issuer-only registration, buyer outcome-selection rejection, observation-window validation, and mandatory fresh evidence for retry.
+- 48 contract tests passed, including a live-shaped regression proving that an independently sufficient partial mismatch remains valid when an unrelated evidence dimension is `UNKNOWN`.
 - 46 frontend tests passed, including explicit injected-wallet selection, the same-origin Studionet RPC retry proxy, rate-limit preservation, order-scoped transaction attribution, terminal-state reconciliation after a transient RPC polling failure, settled-order action messaging, exact returned-ID handling, issuer-registration calldata, and proof that the buyer UI exposes neither outcome presets nor evidence URL inputs.
 - GenVM lint and validation passed.
 - Oxlint, TypeScript compilation, and the Vite production build passed.
@@ -150,7 +150,7 @@ Local tests mock web, model, wallet, and SDK behavior. They are regression evide
 
 ## Deployment and recovery
 
-`frontend/.env.example` contains no address. The live frontend is configured for the verified Studionet replacement contract `0xd5DBaE8c1A1B2A8F34dba3e4AdC62f9263EaB53d`; its deployment finalized successfully and the selected external wallet was read back as both upgrader and evidence issuer.
+`frontend/.env.example` contains no address. The live frontend remains configured for `0xd5DBaE8c1A1B2A8F34dba3e4AdC62f9263EaB53d`. That address must not be described as the deployment of the current source until the validator-compatibility fix is deployed or upgraded and source parity is verified.
 
 The submitted V1 [deployment](https://explorer-studio.genlayer.com/tx/0x7ebe17a1815e77ffcd2e6f3587693dfd3a44e7ff475f9a05ebb90fe5e19ceab8), [order creation](https://explorer-studio.genlayer.com/tx/0x6e066962310c5736670c6a20170cc61b8b81b3065e859ef78356114c33056e7f), [material-mismatch dispute](https://explorer-studio.genlayer.com/tx/0x43f8916eace1c93da67ac8fe4173e85ab55e945feafd0bde094a73fcb8695e9d), and [buyer transfer](https://explorer-studio.genlayer.com/tx/0x312f9bba5a7a0663a75da2fc46a1f41924b9416fc855c164b939d6c4e200d69a) remain historical evidence only. The replacement deployment now has live proof for exact-ID order creation, issuer-signed evidence registration, a finalized 100% material-mismatch refund, [buyer-confirmed normal release](https://explorer-studio.genlayer.com/tx/0x8ed60188d11129026a5e01f53d8a32f044575f81e461f2abaf011f1c7abe08eb), and [expired escrow recovery](https://explorer-studio.genlayer.com/tx/0x9f174a5a46d823d043c6db790d108b7f9e014035ba8e74339a7d6af891be903b).
 

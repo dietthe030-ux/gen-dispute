@@ -820,6 +820,42 @@ def test_validator_accepts_matching_decision_fields_with_different_summary_text(
     assert direct_vm.run_validator() is True
     assert contract.get_order(0)["refund_tier"] == 50
 
+
+def test_validator_accepts_partial_mismatch_when_unrelated_dimension_is_unknown(
+    direct_deploy, direct_vm, direct_alice, direct_bob
+):
+    contract = direct_deploy("contracts/gen_dispute.py")
+
+    with direct_vm.prank(direct_alice):
+        direct_vm.value = 1000
+        contract.create_order(
+            direct_bob,
+            "https://listing.url",
+            "Vintage Rolex Submariner watch in excellent condition",
+            "Vintage Watch",
+        )
+
+    mock_evidence(contract, direct_vm, ROLEX_PARTIAL_URL)
+    output = {
+        "item_identity": "MATCH",
+        "condition": "PARTIAL_MISMATCH",
+        "included_items": "UNKNOWN",
+        "evidence_sufficient": True,
+        "refund_tier": 50,
+        "reason_code": "PARTIAL_MISMATCH",
+        "summary": "The listed watch has a minor cosmetic discrepancy.",
+        "listing_facts": ["The listing describes excellent condition"],
+        "evidence_facts": ["The watch has shallow cosmetic scratches"],
+    }
+    direct_vm.mock_llm(r".*", json.dumps(output))
+    direct_vm._gl_call_hook = lambda _vm, request: {"ok": None} if "EthSend" in request else None
+
+    with direct_vm.prank(direct_bob):
+        contract.open_dispute(0, "The watch has minor cosmetic scratches")
+
+    assert direct_vm.run_validator() is True
+    assert contract.get_order(0)["refund_tier"] == 50
+
 def test_listing_snapshot_immutability(direct_deploy, direct_vm, direct_alice, direct_bob):
     contract = direct_deploy("contracts/gen_dispute.py")
     

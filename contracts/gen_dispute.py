@@ -377,7 +377,7 @@ class GenDispute(gl.Contract):
                 4. evidence_sufficient: true if the evidence is clear and sufficient to make a judgment, false if evidence is insufficient/unknown.
                 5. refund_tier: 0 if no discrepancies, 50 if only non-material condition/accessory discrepancies exist, 100 if identity mismatch or material condition/accessory discrepancy exists.
                 6. reason_code: MATCHES_DESCRIPTION if refund_tier is 0, PARTIAL_MISMATCH if refund_tier is 50, MATERIAL_MISMATCH if refund_tier is 100.
-                If item_identity is MISMATCH, condition and included_items may be UNKNOWN because the independently sufficient identity mismatch still determines refund_tier 100. Do not invent condition or accessory facts for a different item.
+                A field may remain UNKNOWN when the evidence does not address that dimension, provided another factual discrepancy independently determines the refund tier. Do not invent condition or accessory facts merely to replace UNKNOWN.
 
                 Respond with ONLY this JSON (no markdown, no explanation outside):
                 {{
@@ -624,8 +624,6 @@ class GenDispute(gl.Contract):
                 if item_identity == "MISMATCH":
                     expected_tier = 100
                 elif item_identity != "MATCH":
-                    return False
-                elif condition == "UNKNOWN" or included_items == "UNKNOWN":
                     return False
                 elif condition == "MATERIAL_MISMATCH" or included_items == "MATERIAL_MISMATCH":
                     expected_tier = 100

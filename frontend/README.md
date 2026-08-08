@@ -29,7 +29,7 @@ The connect action shows the injected wallets detected in the browser instead of
 
 ## Contract configuration
 
-The local and public integration target is the verified replacement contract `0xd5DBaE8c1A1B2A8F34dba3e4AdC62f9263EaB53d`. Set that exact address through the gitignored `.env` locally and through Vercel environment configuration. Never commit `.env` or use a placeholder address.
+The public frontend currently targets `0xd5DBaE8c1A1B2A8F34dba3e4AdC62f9263EaB53d`, which predates the validator-compatibility fix in the current contract source. Keep `.env` gitignored and do not change the production address until a new deployment or authorized upgrade has passed source-parity and live checks. Never use a placeholder address.
 
 ## Commands
 

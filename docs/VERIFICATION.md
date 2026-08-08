@@ -10,7 +10,9 @@
 | Prior reviewed contract SHA-256 | `78d7d013ddc747a9776468ee01194744d2d86363e0c18f8dd4a58c2ae8604515` |
 | Approved PRE_DEPLOY commit | `a350de3db6fea88918cb55110225e9cb9f90b6d1` (`APPROVED`) |
 | Exact reviewed revision | Supplied by `git rev-parse HEAD` in each checkpoint package; it is not self-embedded because editing this file changes the commit hash. |
-| Contract source SHA-256 | `9b1cece7f2feb3af52817bce8e0be62d02f5e493da1671557fa6269faca35a23` |
+| Current candidate source SHA-256 | `22d16b89b97f9570107adc76fe7d9f212641a7b04b0611d1b872bf47911cb6ed` |
+| Current candidate deployment status | Not deployed; fresh deployment or authorized upgrade required |
+| Prior deployed source SHA-256 | `9b1cece7f2feb3af52817bce8e0be62d02f5e493da1671557fa6269faca35a23` |
 | Network | GenLayer Studionet, chain ID `61999` |
 | Deployment classification | Upgradable through GenLayer Root Slot |
 | Selected deployer/upgrader | `0xbf90af1bc61314775d57b641b89c1f702a93b40d` |
@@ -18,7 +20,7 @@
 | Deployment transaction | `0x13c21f3c5d5aea282fda77c0c8d503cee8c1aff2093e6ca0b5efc11224e4a73e` |
 | Local gate audit | `PASS` |
 
-The release candidate is deployed on Studionet. The deployment is `FINALIZED`, has successful GenVM execution and majority agreement, and its deployed source SHA-256 exactly matches the approved contract source. Independent readback returns `0xbf90af1bc61314775d57b641b89c1f702a93b40d` from both `get_upgrader()` and `get_evidence_issuer()`. Live dispute settlement, buyer confirmation, and expiry recovery are verified by the proof matrix below.
+The recorded Studionet deployment is `FINALIZED`, has successful GenVM execution and majority agreement, and matches the prior deployed source hash above. It does not contain the current validator-compatibility fix. The current candidate must receive a new address or authorized upgrade, source-parity verification, and fresh live consensus evidence before release.
 
 ## Reviewer-requested remediation
 
@@ -55,7 +57,7 @@ git diff --check
 
 Results:
 
-- Contract: `47 passed`.
+- Contract: `48 passed`.
 - GenVM: lint passed, validation passed, 10 public methods detected.
 - Frontend: `46 passed` across 5 test files.
 - Oxlint: zero errors.
@@ -90,9 +92,29 @@ Contract tests use an isolated WSL environment with `genlayer-test==0.29.2`. Web
 
 ## Deployment and recovery gate
 
-The anonymous co-review AI approved the exact `PRE_DEPLOY` revision and source hash. The selected wallet `0xbf90af1bc61314775d57b641b89c1f702a93b40d` deployed the replacement contract and was independently read back as both Root Slot upgrader and evidence issuer. The local upgrade rehearsal and the `POST_DEPLOY_TEST` live proof matrix are complete.
+The prior source completed its recorded deployment checks. The current candidate source hash has changed to fix a live validator-compatibility defect and therefore requires a fresh exact-revision review and deployment gate before it can replace the live baseline.
 
-### Final deployment manifest
+### Current candidate draft deployment manifest
+
+| Field | Value |
+| --- | --- |
+| Network | GenLayer Studionet |
+| Chain ID | `61999` |
+| RPC | `https://studio.genlayer.com/api` |
+| Contract source | `contracts/gen_dispute.py` |
+| Source revision | Supplied by `git rev-parse HEAD` in the review package |
+| Source SHA-256 | `22d16b89b97f9570107adc76fe7d9f212641a7b04b0611d1b872bf47911cb6ed` |
+| Constructor arguments | None (`__init__(self)`) |
+| Deployment classification | `UPGRADABLE` |
+| Selected deployer/upgrader/evidence issuer | `0xbf90af1bc61314775d57b641b89c1f702a93b40d` |
+| Linked contracts | None |
+| Contract address |  |
+| Deployment transaction |  |
+| Frontend update | Only after `FINALIZED`, execution `SUCCESS`, source parity, and role readbacks are verified |
+
+The recovery runbooks below apply to this candidate after its address and deployment transaction are recorded. Until then, the prior live contract remains isolated from the candidate release.
+
+### Prior live deployment manifest
 
 | Field | Value |
 | --- | --- |
@@ -108,9 +130,9 @@ The anonymous co-review AI approved the exact `PRE_DEPLOY` revision and source h
 | Linked contracts | None |
 | Contract address | `0xd5DBaE8c1A1B2A8F34dba3e4AdC62f9263EaB53d` |
 | Deployment transaction | `0x13c21f3c5d5aea282fda77c0c8d503cee8c1aff2093e6ca0b5efc11224e4a73e` |
-| Production frontend | `https://gen-dispute.vercel.app` targets the replacement contract |
+| Production frontend | `https://gen-dispute.vercel.app` targets this prior live contract |
 
-The exact release revision is supplied by `git rev-parse HEAD` in each review package rather than embedded in this file, because embedding it would change that revision. The deployed-source hash, address, deployment transaction, actor addresses, live verification transactions, and recovery procedure are recorded here.
+The exact candidate revision is supplied by `git rev-parse HEAD` in each review package rather than embedded in this file. The manifest above remains evidence for the prior deployed source only.
 
 ### Recovery runbooks
 
