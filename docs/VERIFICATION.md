@@ -24,7 +24,7 @@ The release candidate is deployed on Studionet. The deployment is `FINALIZED`, h
 
 | Request | Implemented evidence |
 | --- | --- |
-| Consume the ID returned by `create_order` | `useGenDispute.ts` reads the accepted transaction through `getTransaction`, decodes `consensus_data.leader_receipt[0].result.payload.raw` through `abi.calldata.decode`, and loads that exact order without relying on a debug RPC. |
+| Consume the ID returned by `create_order` | `useGenDispute.ts` reads the accepted transaction through `getTransaction`, decodes `consensus_data.leader_receipt[0].result.payload.raw` through `abi.calldata.decode`, and loads that exact order without relying on a debug RPC. Reads and consensus polling use the same-origin `/api/rpc` function, which retries transient transport failures and forwards to the official Studionet endpoint. |
 | Cover concurrent order creation | The frontend regression sets the global count to `12` while `create_order` returns ID `7`, then proves the UI loads order `7`. The count is display-only. |
 | Bind authenticated evidence to each order | The deployment wallet is the evidence issuer and signs `register_evidence_receipt`, binding one trusted-origin URL, SHA-256, observation time, and globally unique nonce to one order. The contract forbids the issuer from being buyer or seller. Receipt attestations must match the exact order ID, canonical item ID, publisher ID, and nonce. Each attempt retains its own URL, byte hash, observation time, attestation hash, and canonical commitment. |
 | Add normal release | The named buyer can call `confirm_delivery`; the contract records `BUYER_CONFIRMED` and releases the full escrow to the seller. |
@@ -84,7 +84,7 @@ Contract tests use an isolated WSL environment with `genlayer-test==0.29.2`. Web
 - EIP-6963/EIP-1193 injected-wallet discovery, explicit provider selection, Studionet switching, mandatory per-connect wallet signatures, signature rejection, reconnect-after-disconnect, and network-switch failures;
 - explicit order lookup and account-change selection clearing;
 - exact `create_order` return decoding under a simulated concurrent count race;
-- accepted, finalized, majority-disagree, undetermined, execution-error, finalization-timeout, post-submission RPC recovery through terminal state readback, and post-quorum idle-validator handling, including the live RPC `leader_receipt` shape;
+- accepted, finalized, majority-disagree, undetermined, execution-error, finalization-timeout, same-origin RPC retry proxy behavior, post-submission RPC recovery through terminal state readback, and post-quorum idle-validator handling, including the live RPC `leader_receipt` shape;
 - normal buyer release and expired recovery writes;
 - buyer reason-only dispute UI with no outcome/evidence selectors, issuer receipt registration, and reviewer-facing `/docs` content.
 

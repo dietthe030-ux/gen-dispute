@@ -100,7 +100,7 @@ For every write, the frontend:
 7. waits for `FINALIZED`, checks execution `SUCCESS` again, and reconciles state; and
 8. keeps a timed-out finalization visible as accepted/pending rather than reporting false success.
 
-Validators cancelled after quorum are not treated as failed transactions, including RPC responses that place idle validator entries inside `leader_receipt`. Wallet rejection, RPC, validation, consensus, execution, readback, and timeout errors remain visible in the transaction panel. Disconnecting or changing accounts clears the session, and reconnecting always requires a new wallet signature.
+Validators cancelled after quorum are not treated as failed transactions, including RPC responses that place idle validator entries inside `leader_receipt`. Wallets sign and submit writes, while contract reads and consensus polling use the same-origin `/api/rpc` proxy, which retries transient transport failures before forwarding to the official Studionet RPC. Wallet rejection, RPC, validation, consensus, execution, readback, and timeout errors remain visible in the transaction panel. Disconnecting or changing accounts clears the session, and reconnecting always requires a new wallet signature.
 
 ## Run locally
 
@@ -141,7 +141,7 @@ npm run build
 Current local results:
 
 - 47 contract tests passed, including cross-order replay rejection, issuer-only registration, buyer outcome-selection rejection, observation-window validation, and mandatory fresh evidence for retry.
-- 42 frontend tests passed, including explicit injected-wallet selection, terminal-state reconciliation after a transient RPC polling failure, settled-order action messaging, exact returned-ID handling, issuer-registration calldata, and proof that the buyer UI exposes neither outcome presets nor evidence URL inputs.
+- 44 frontend tests passed, including explicit injected-wallet selection, the same-origin Studionet RPC retry proxy, terminal-state reconciliation after a transient RPC polling failure, settled-order action messaging, exact returned-ID handling, issuer-registration calldata, and proof that the buyer UI exposes neither outcome presets nor evidence URL inputs.
 - GenVM lint and validation passed.
 - Oxlint, TypeScript compilation, and the Vite production build passed.
 - The production build reports a non-blocking large-chunk warning.
@@ -173,6 +173,6 @@ The contract is classified as upgradable through GenLayer Root Slot. Any upgrade
 - Evidence bytes are content-addressed by SHA-256 but are not stored in a durable decentralized storage network and may later disappear from their URLs.
 - Live remediation evidence currently covers replacement deployment, exact-ID order creation, issuer-signed evidence registration, and a finalized replacement-contract 100% material-mismatch refund; normal release and expiry recovery still require supervised proof.
 - The 0% and 50% dispute tiers remain local-test-only paths.
-- The frontend currently depends on an injected EIP-1193 wallet and browser polling.
+- The frontend currently depends on an injected EIP-1193 wallet. Consensus is polled through a bounded-retry, same-origin Vercel proxy to the official Studionet RPC; it is not a separate source of chain truth.
 
 See [ROADMAP.md](ROADMAP.md) for deployment verification, durable evidence storage, observability, cancellation policy, and controlled pilot plans.
