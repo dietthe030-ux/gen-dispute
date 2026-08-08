@@ -8,13 +8,13 @@ GenDispute is a seller-funded GEN escrow prototype for item-not-as-described tra
 
 | Item | Link | Current status |
 | --- | --- | --- |
-| Web application | [gen-dispute.vercel.app](https://gen-dispute.vercel.app) | Public V1 at `/` with reviewer documentation at `/docs` |
+| Web application | [gen-dispute.vercel.app](https://gen-dispute.vercel.app) | Production remediation frontend at `/` with reviewer documentation at `/docs` |
 | Replacement contract | [`0xd5DBaE8c1A1B2A8F34dba3e4AdC62f9263EaB53d`](https://explorer-studio.genlayer.com/address/0xd5DBaE8c1A1B2A8F34dba3e4AdC62f9263EaB53d) | Remediation source deployed on Studionet; live workflow verification is in progress |
-| Source repository | [dietthe030-ux/gen-dispute](https://github.com/dietthe030-ux/gen-dispute) | Public repository before the remediation release |
+| Source repository | [dietthe030-ux/gen-dispute](https://github.com/dietthe030-ux/gen-dispute) | Public source for the current release |
 | Verification record | [docs/VERIFICATION.md](docs/VERIFICATION.md) | Local remediation evidence and deployment gate status |
 | Network | GenLayer Studionet, chain ID `61999` | RPC `https://studio.genlayer.com/api` |
 
-The replacement deployment transaction [`0x13c21f...e4a73e`](https://explorer-studio.genlayer.com/tx/0x13c21f3c5d5aea282fda77c0c8d503cee8c1aff2093e6ca0b5efc11224e4a73e) is `FINALIZED` with successful GenVM execution and majority agreement. Its deployed source SHA-256 matches `contracts/gen_dispute.py`. The public Vercel app remains on V1 until the replacement workflow passes live verification.
+The replacement deployment transaction [`0x13c21f...e4a73e`](https://explorer-studio.genlayer.com/tx/0x13c21f3c5d5aea282fda77c0c8d503cee8c1aff2093e6ca0b5efc11224e4a73e) is `FINALIZED` with successful GenVM execution and majority agreement. Its deployed source SHA-256 matches `contracts/gen_dispute.py`, and the public Vercel app targets this replacement contract. Remaining live-proof gaps are disclosed below.
 
 ## Trust problem
 
@@ -152,7 +152,7 @@ Local tests mock web, model, wallet, and SDK behavior. They are regression evide
 
 `frontend/.env.example` contains no address. The live frontend is configured for the verified Studionet replacement contract `0xd5DBaE8c1A1B2A8F34dba3e4AdC62f9263EaB53d`; its deployment finalized successfully and the selected external wallet was read back as both upgrader and evidence issuer.
 
-The submitted V1 [deployment](https://explorer-studio.genlayer.com/tx/0x7ebe17a1815e77ffcd2e6f3587693dfd3a44e7ff475f9a05ebb90fe5e19ceab8), [order creation](https://explorer-studio.genlayer.com/tx/0x6e066962310c5736670c6a20170cc61b8b81b3065e859ef78356114c33056e7f), [material-mismatch dispute](https://explorer-studio.genlayer.com/tx/0x43f8916eace1c93da67ac8fe4173e85ab55e945feafd0bde094a73fcb8695e9d), and [buyer transfer](https://explorer-studio.genlayer.com/tx/0x312f9bba5a7a0663a75da2fc46a1f41924b9416fc855c164b939d6c4e200d69a) remain historical evidence only. The replacement release requires new proof for returned-ID creation, normal release, dispute evidence binding, and expiry recovery.
+The submitted V1 [deployment](https://explorer-studio.genlayer.com/tx/0x7ebe17a1815e77ffcd2e6f3587693dfd3a44e7ff475f9a05ebb90fe5e19ceab8), [order creation](https://explorer-studio.genlayer.com/tx/0x6e066962310c5736670c6a20170cc61b8b81b3065e859ef78356114c33056e7f), [material-mismatch dispute](https://explorer-studio.genlayer.com/tx/0x43f8916eace1c93da67ac8fe4173e85ab55e945feafd0bde094a73fcb8695e9d), and [buyer transfer](https://explorer-studio.genlayer.com/tx/0x312f9bba5a7a0663a75da2fc46a1f41924b9416fc855c164b939d6c4e200d69a) remain historical evidence only. The replacement deployment has new proof for exact-ID order creation and issuer-signed evidence registration; normal release, a finalized dispute, and expiry recovery still require supervised proof.
 
 The contract is classified as upgradable through GenLayer Root Slot. Any upgrade requires the registered external wallet, a non-empty source payload, local regression verification, an isolated rehearsal deployment, deployed-source parity checks, and fresh exact-revision review.
 
