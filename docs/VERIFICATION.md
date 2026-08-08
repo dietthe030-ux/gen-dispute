@@ -57,7 +57,7 @@ Results:
 
 - Contract: `47 passed`.
 - GenVM: lint passed, validation passed, 10 public methods detected.
-- Frontend: `41 passed` across 4 test files.
+- Frontend: `42 passed` across 4 test files.
 - Oxlint: zero errors.
 - TypeScript and Vite production build: passed.
 - Repository gate audit: `PASS`.

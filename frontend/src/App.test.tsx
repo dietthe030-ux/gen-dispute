@@ -155,6 +155,57 @@ describe('App Component', () => {
     expect(confirmDelivery).toHaveBeenCalledOnce()
   })
 
+  it('does not advertise buyer actions after the order is settled', () => {
+    ;(useGenDispute as any).mockReturnValue({
+      account: { address: '0x81b637d8fcd2c6dac59ee6963113a1170de795e4' },
+      uiState: 'PAID_OUT',
+      txHash: '0xtxhash',
+      errorMessage: '',
+      orderState: {
+        orderId: 0,
+        seller: '0x1234567890123456789012345678901234567890',
+        buyer: '0x81b637d8fcd2c6dac59ee6963113a1170de795e4',
+        escrowAmount: 100000000000000000n,
+        createdAt: 1786147200,
+        expiresAt: 1786752000,
+        listingUrl: 'https://listing.url/rolex_v2',
+        itemDescription: 'Black Casio digital wristwatch',
+        itemId: 'WATCH_CASIO_DIGITAL',
+        evidencePolicyHash: 'a'.repeat(64),
+        evidenceReceiptUrl: 'https://gen-dispute.vercel.app/fixtures/order-0.html',
+        evidenceReceiptSha256: 'b'.repeat(64),
+        evidenceObservedAt: [1786177748],
+        status: 'PAID_OUT',
+        disputeAttempts: 0,
+        disputeReason: 'Material mismatch',
+        evidenceUrls: ['https://gen-dispute.vercel.app/fixtures/order-0.html'],
+        evidenceHashes: ['b'.repeat(64)],
+        evidenceCommitments: ['c'.repeat(64)],
+        refundTier: 100,
+        buyerPayout: 100000000000000000n,
+        sellerPayout: 0n,
+        outcome: 'MATERIAL_MISMATCH',
+        lastError: '',
+      },
+      ...orderControls(0),
+      connectWallet: vi.fn(),
+      disconnectWallet: vi.fn(),
+      createOrder: vi.fn(),
+      openDispute: vi.fn(),
+      confirmDelivery: vi.fn(),
+      recoverExpiredOrder: vi.fn(),
+      refreshOrder: vi.fn(),
+      setUiState: vi.fn(),
+      isRetrying: false,
+      setIsRetrying: vi.fn(),
+    })
+
+    render(<App />)
+
+    expect(screen.getByText('This order is settled. No further party action is available.')).toBeInTheDocument()
+    expect(screen.queryByText('You can confirm delivery or open a dispute while the order is open.')).not.toBeInTheDocument()
+  })
+
   it('renders order details and seller message when connected as SELLER', () => {
     const recoverExpiredOrder = vi.fn()
     ;(useGenDispute as any).mockReturnValue({

@@ -43,7 +43,7 @@ npm run build
 
 Current local verification:
 
-- 41 frontend tests passed.
+- 42 frontend tests passed.
 - Oxlint completed with zero errors.
 - TypeScript compilation and the Vite production build succeeded.
 - The production build reports a non-blocking large-chunk warning.

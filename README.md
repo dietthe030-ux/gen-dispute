@@ -141,7 +141,7 @@ npm run build
 Current local results:
 
 - 47 contract tests passed, including cross-order replay rejection, issuer-only registration, buyer outcome-selection rejection, observation-window validation, and mandatory fresh evidence for retry.
-- 41 frontend tests passed, including explicit injected-wallet selection, terminal-state reconciliation after a transient RPC polling failure, exact returned-ID handling, issuer-registration calldata, and proof that the buyer UI exposes neither outcome presets nor evidence URL inputs.
+- 42 frontend tests passed, including explicit injected-wallet selection, terminal-state reconciliation after a transient RPC polling failure, settled-order action messaging, exact returned-ID handling, issuer-registration calldata, and proof that the buyer UI exposes neither outcome presets nor evidence URL inputs.
 - GenVM lint and validation passed.
 - Oxlint, TypeScript compilation, and the Vite production build passed.
 - The production build reports a non-blocking large-chunk warning.

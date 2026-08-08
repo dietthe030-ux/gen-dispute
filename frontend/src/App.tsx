@@ -77,6 +77,7 @@ const App: React.FC = () => {
   const isEvidenceIssuer = !!(
     connectedAddress && evidenceIssuer && connectedAddress.toLowerCase() === evidenceIssuer.toLowerCase()
   )
+  const isSettled = orderState?.status === 'PAID_OUT' || orderState?.status === 'RESOLVED'
   const hasFreshEvidenceReceipt = !!orderState?.evidenceReceiptUrl && (
     orderState.disputeAttempts === 0 ||
     orderState.evidenceReceiptUrl !== orderState.evidenceUrls.at(-1) ||
@@ -130,7 +131,9 @@ const App: React.FC = () => {
                 <div className="role-badge role-observer">Observer</div>
               )}
               <p className="role-desc">
-                {isEvidenceIssuer
+                {isSettled
+                  ? 'This order is settled. No further party action is available.'
+                  : isEvidenceIssuer
                   ? 'You can register a content-addressed receipt for this order.'
                   : isBuyer
                   ? 'You can confirm delivery or open a dispute while the order is open.'
