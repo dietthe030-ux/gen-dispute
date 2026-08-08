@@ -9,7 +9,7 @@ GenDispute is a seller-funded GEN escrow prototype for item-not-as-described tra
 | Item | Link | Current status |
 | --- | --- | --- |
 | Web application | [gen-dispute.vercel.app](https://gen-dispute.vercel.app) | Production remediation frontend at `/` with reviewer documentation at `/docs` |
-| Replacement contract | [`0xd5DBaE8c1A1B2A8F34dba3e4AdC62f9263EaB53d`](https://explorer-studio.genlayer.com/address/0xd5DBaE8c1A1B2A8F34dba3e4AdC62f9263EaB53d) | Remediation source deployed on Studionet; live workflow verification is in progress |
+| Replacement contract | [`0xd5DBaE8c1A1B2A8F34dba3e4AdC62f9263EaB53d`](https://explorer-studio.genlayer.com/address/0xd5DBaE8c1A1B2A8F34dba3e4AdC62f9263EaB53d) | Remediation source deployed on Studionet; dispute settlement, buyer confirmation, and expiry recovery are verified live |
 | Source repository | [dietthe030-ux/gen-dispute](https://github.com/dietthe030-ux/gen-dispute) | Public source for the current release |
 | Verification record | [docs/VERIFICATION.md](docs/VERIFICATION.md) | Local remediation evidence and deployment gate status |
 | Network | GenLayer Studionet, chain ID `61999` | RPC `https://studio.genlayer.com/api` |

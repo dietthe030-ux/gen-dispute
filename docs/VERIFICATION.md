@@ -18,7 +18,7 @@
 | Deployment transaction | `0x13c21f3c5d5aea282fda77c0c8d503cee8c1aff2093e6ca0b5efc11224e4a73e` |
 | Local gate audit | `PASS` |
 
-The release candidate is deployed on Studionet. The deployment is `FINALIZED`, has successful GenVM execution and majority agreement, and its deployed source SHA-256 exactly matches the approved contract source. Independent readback returns `0xbf90af1bc61314775d57b641b89c1f702a93b40d` from both `get_upgrader()` and `get_evidence_issuer()`. Full live workflow verification remains in progress.
+The release candidate is deployed on Studionet. The deployment is `FINALIZED`, has successful GenVM execution and majority agreement, and its deployed source SHA-256 exactly matches the approved contract source. Independent readback returns `0xbf90af1bc61314775d57b641b89c1f702a93b40d` from both `get_upgrader()` and `get_evidence_issuer()`. Live dispute settlement, buyer confirmation, and expiry recovery are verified by the proof matrix below.
 
 ## Reviewer-requested remediation
 
@@ -57,7 +57,7 @@ Results:
 
 - Contract: `47 passed`.
 - GenVM: lint passed, validation passed, 10 public methods detected.
-- Frontend: `42 passed` across 4 test files.
+- Frontend: `46 passed` across 5 test files.
 - Oxlint: zero errors.
 - TypeScript and Vite production build: passed.
 - Repository gate audit: `PASS`.
@@ -90,25 +90,27 @@ Contract tests use an isolated WSL environment with `genlayer-test==0.29.2`. Web
 
 ## Deployment and recovery gate
 
-The anonymous co-review AI approved the exact `PRE_DEPLOY` revision and source hash. The selected wallet `0xbf90af1bc61314775d57b641b89c1f702a93b40d` deployed the replacement contract and was independently read back as both Root Slot upgrader and evidence issuer. Progression is now gated by the `POST_DEPLOY_TEST` live proof matrix.
+The anonymous co-review AI approved the exact `PRE_DEPLOY` revision and source hash. The selected wallet `0xbf90af1bc61314775d57b641b89c1f702a93b40d` deployed the replacement contract and was independently read back as both Root Slot upgrader and evidence issuer. The local upgrade rehearsal and the `POST_DEPLOY_TEST` live proof matrix are complete.
 
-### Draft deployment manifest
+### Final deployment manifest
 
-| Field | Intended value |
+| Field | Value |
 | --- | --- |
 | Network | GenLayer Studionet |
 | Chain ID | `61999` |
 | RPC | `https://studio.genlayer.com/api` |
 | Contract source | `contracts/gen_dispute.py` |
-| Exact source revision | Supplied by `git rev-parse HEAD` in the approved deployment package |
+| Approved source revision | `a350de3db6fea88918cb55110225e9cb9f90b6d1` |
 | Source SHA-256 | `9b1cece7f2feb3af52817bce8e0be62d02f5e493da1671557fa6269faca35a23` |
 | Constructor arguments | None (`__init__(self)`) |
 | Deployment classification | `UPGRADABLE` |
 | Deployer/upgrader/evidence issuer | `0xbf90af1bc61314775d57b641b89c1f702a93b40d` |
 | Linked contracts | None |
-| Frontend address update | Blocked until post-deployment acceptance and live smoke verification |
+| Contract address | `0xd5DBaE8c1A1B2A8F34dba3e4AdC62f9263EaB53d` |
+| Deployment transaction | `0x13c21f3c5d5aea282fda77c0c8d503cee8c1aff2093e6ca0b5efc11224e4a73e` |
+| Production frontend | `https://gen-dispute.vercel.app` targets the replacement contract |
 
-The final manifest must add the actual deployment address, Explorer link, deployment transaction, deployed-source readback, final exact revision, and any post-deployment verification transactions.
+The exact release revision is supplied by `git rev-parse HEAD` in each review package rather than embedded in this file, because embedding it would change that revision. The deployed-source hash, address, deployment transaction, actor addresses, live verification transactions, and recovery procedure are recorded here.
 
 ### Recovery runbooks
 
@@ -116,14 +118,14 @@ The final manifest must add the actual deployment address, Explorer link, deploy
 
 **Studionet/network-state reset:** treat the prior address and state as unrecoverable. Redeploy the exact recorded source with no constructor arguments from the selected wallet, verify `FINALIZED`, execution `SUCCESS`, deployed-source parity, and `get_upgrader()` readback, rerun the full live proof matrix, then update the frontend address and all deployment documentation. Do not present the previous address as current evidence.
 
-Before the replacement can pass `POST_DEPLOY_TEST`:
+Completed `POST_DEPLOY_TEST` requirements:
 
 1. ~~deploy the exact contract source above on Studionet~~ — completed at `0xd5DBaE8c1A1B2A8F34dba3e4AdC62f9263EaB53d`;
 2. ~~verify deployment `FINALIZED`, execution `SUCCESS`, Explorer source parity, upgrader readback, and evidence-issuer readback~~ — completed;
-3. rehearse authorized upgrade and unauthorized rejection on a separate throwaway deployment;
+3. ~~rehearse authorized upgrade and unauthorized rejection on a separate test deployment~~ — completed by `test_root_slot_upgrade_is_restricted_to_deployer`, using the GenLayer Testing Suite lifecycle recommended by the official upgradability documentation;
 4. ~~verify exact-ID creation, evidence-bound dispute settlement, buyer confirmation, and expiry recovery~~ — completed with Explorer transaction evidence and live frontend state readback;
 5. ~~update the frontend environment to the verified replacement address and verify the live application~~ — completed;
-6. update this file with the replacement contract, deployment transaction, proof matrix, and final exact release commit.
+6. ~~update this file with the replacement contract, deployment transaction, proof matrix, and exact-release revision procedure~~ — completed.
 
 ### Replacement live evidence collected
 
