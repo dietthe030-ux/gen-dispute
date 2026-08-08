@@ -393,6 +393,7 @@ export const useGenDispute = () => {
 
   const disconnectWallet = useCallback(() => {
     setAccount(null)
+    setTxHash('')
     setOrderState(null)
     setSelectedOrderId(null)
     setOrderCount(null)
@@ -407,6 +408,7 @@ export const useGenDispute = () => {
     if (provider) {
       const handleAccounts = (accounts: string[]) => {
         setAccount(null)
+        setTxHash('')
         setSelectedOrderId(null)
         setOrderState(null)
         setOrderCount(null)
@@ -501,6 +503,7 @@ export const useGenDispute = () => {
   }, [readOrder, selectedOrderId])
 
   const loadOrder = useCallback(async (orderId: number) => {
+    setTxHash('')
     if (!Number.isSafeInteger(orderId) || orderId < 0) {
       setUiState('ERROR')
       setErrorMessage('Order ID must be a non-negative whole number')
@@ -535,22 +538,13 @@ export const useGenDispute = () => {
   }, [readOrder])
 
   const clearSelectedOrder = useCallback(() => {
+    setTxHash('')
     setSelectedOrderId(null)
     setOrderState(null)
     setIsRetrying(false)
     setErrorMessage('')
     setUiState(account ? 'RETRY_AVAILABLE' : 'DISCONNECTED')
   }, [account])
-
-  // Read only the explicitly selected order. A wallet switch never inherits
-  // another wallet's last-viewed order.
-  useEffect(() => {
-    if (account && CONTRACT_ADDRESS && selectedOrderId !== null) {
-      refreshOrder()
-      const interval = setInterval(refreshOrder, 5000)
-      return () => clearInterval(interval)
-    }
-  }, [account, selectedOrderId, refreshOrder])
 
   useEffect(() => {
     if (account && CONTRACT_ADDRESS) {
@@ -579,6 +573,7 @@ export const useGenDispute = () => {
     }
 
     setUiState('SUBMITTING')
+    setTxHash('')
     setErrorMessage('')
     try {
       // 1. Verify listing snapshot against deterministic fixture registry
@@ -638,6 +633,7 @@ export const useGenDispute = () => {
     }
 
     setUiState('SUBMITTING')
+    setTxHash('')
     setErrorMessage('')
     try {
       await checkAndSwitchNetwork(activeProvider)
@@ -700,6 +696,7 @@ export const useGenDispute = () => {
       return
     }
     setUiState('SUBMITTING')
+    setTxHash('')
     setErrorMessage('')
     try {
       await checkAndSwitchNetwork(activeProvider)
@@ -747,6 +744,7 @@ export const useGenDispute = () => {
     }
 
     setUiState('SUBMITTING')
+    setTxHash('')
     setErrorMessage('')
     try {
       // 1. Verify network/chain ID before write

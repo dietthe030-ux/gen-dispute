@@ -1,6 +1,6 @@
 # Project Roadmap
 
-This roadmap reflects source, local verification, and the replacement Studionet deployment reviewed on August 8, 2026. It claims no users, traction, or partnerships. Full replacement workflow verification and the matching public frontend release remain in progress.
+This roadmap reflects source, local verification, and the replacement Studionet deployment reviewed on August 8, 2026. It claims no users, traction, or partnerships. The three live settlement paths are verified; final exact-revision review of the matching public frontend release remains in progress.
 
 ## V1 Delivered
 
@@ -31,9 +31,9 @@ The remediation build includes:
 | --- | --- |
 | Public source | [dietthe030-ux/gen-dispute](https://github.com/dietthe030-ux/gen-dispute) contains the reviewed contract, frontend, tests, and documentation. |
 | Local contract verification | 47/47 tests pass, covering issuer authorization, cross-order replay rejection, buyer outcome-selection rejection, order/item/time/nonce/hash binding, hostile inputs, independent verdict checks, commitments, deadlines, release, recovery, and Root Slot authorization. |
-| Local frontend verification | 44/44 tests pass, including explicit provider selection, same-origin Studionet RPC retries, terminal-state reconciliation after transient RPC polling failure, settled-order action messaging, concurrent returned-order decoding, mandatory reconnect signatures, live-shaped post-quorum receipt handling, issuer-registration calldata, and proof that the buyer UI exposes neither outcome presets nor evidence URL inputs; Oxlint, TypeScript compilation, and the Vite production build pass. |
+| Local frontend verification | 46/46 tests pass, including explicit provider selection, same-origin Studionet RPC retries, rate-limit preservation, order-scoped transaction attribution, terminal-state reconciliation after transient RPC polling failure, settled-order action messaging, concurrent returned-order decoding, mandatory reconnect signatures, live-shaped post-quorum receipt handling, issuer-registration calldata, and proof that the buyer UI exposes neither outcome presets nor evidence URL inputs; Oxlint, TypeScript compilation, and the Vite production build pass. |
 | Current public release | [gen-dispute.vercel.app](https://gen-dispute.vercel.app) targets the replacement contract and exposes the remediation frontend. The older [`0x1E877E7B333D5371a75d2EF995763bcdabaeB9cE`](https://explorer-studio.genlayer.com/address/0x1E877E7B333D5371a75d2EF995763bcdabaeB9cE) deployment remains historical V1 evidence only. |
-| Replacement deployment | [`0xd5DBaE8c1A1B2A8F34dba3e4AdC62f9263EaB53d`](https://explorer-studio.genlayer.com/address/0xd5DBaE8c1A1B2A8F34dba3e4AdC62f9263EaB53d) is deployed from the approved source; full live workflow verification is in progress. |
+| Replacement deployment | [`0xd5DBaE8c1A1B2A8F34dba3e4AdC62f9263EaB53d`](https://explorer-studio.genlayer.com/address/0xd5DBaE8c1A1B2A8F34dba3e4AdC62f9263EaB53d) is deployed from the approved source. Explorer records successful finalized transactions for the 100% dispute refund, [buyer confirmation](https://explorer-studio.genlayer.com/tx/0x8ed60188d11129026a5e01f53d8a32f044575f81e461f2abaf011f1c7abe08eb), and [expired recovery](https://explorer-studio.genlayer.com/tx/0x9f174a5a46d823d043c6db790d108b7f9e014035ba8e74339a7d6af891be903b). |
 
 ### Current limitations
 
@@ -87,7 +87,7 @@ Current evidence is separated from future targets.
 | Metric | Current evidence | Future target | Measurement |
 | --- | --- | --- | --- |
 | Contract regression reliability | 47/47 local tests pass. | All required checks pass for every release candidate. | Pinned CI logs and reviewed GenVM test output. |
-| Frontend regression reliability | 44/44 tests, lint, and build pass. | All required checks pass on every main-branch change. | CI test, lint, typecheck, and build results. |
+| Frontend regression reliability | 46/46 tests, lint, and build pass. | All required checks pass on every main-branch change. | CI test, lint, typecheck, and build results. |
 | Source-to-deployment integrity | Replacement deployed source SHA-256 exactly matches the approved local contract source; upgrader and evidence-issuer readbacks match the selected wallet. | Preserve source/address alignment for every release. | Commit hash, deployment transaction, Explorer source, and production environment review. |
 | Transaction success | The replacement deployment, first `create_order`, receipt registration, and 100% material-mismatch dispute finalized with successful decisive executions and majority agreement; this sample is too small for a reliability rate. | At least 95% of wallet-approved supervised writes finalize with accepted consensus, excluding user rejection. | Reconcile frontend submissions with Explorer receipts and execution results. |
 | End-to-end dispute completion | Replacement order `0` is `PAID_OUT` with a verified 100% buyer refund after issuer-bound evidence evaluation. Historical V1 contains a separate 100% refund example. | At least 10 supervised finalized disputes after lifecycle hardening, including evidence for every supported tier. | Explorer transactions and post-transaction contract-state reconciliation. |

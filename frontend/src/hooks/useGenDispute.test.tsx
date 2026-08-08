@@ -782,6 +782,18 @@ describe('useGenDispute Hook', () => {
       expect(result.current.uiState).toBe('PAID_OUT')
       expect(result.current.orderState?.status).toBe('PAID_OUT')
     })
+
+    it('does not attribute the previous order transaction to a loaded order', async () => {
+      const { result } = renderHook(() => useGenDispute())
+      await act(async () => result.current.connectWallet())
+      await act(async () => result.current.loadOrder(0))
+      await act(async () => result.current.confirmDelivery())
+      expect(result.current.txHash).toBe('0xsettlement')
+
+      await act(async () => result.current.loadOrder(1))
+
+      expect(result.current.txHash).toBe('')
+    })
   })
 
   it('registers an issuer-signed order receipt with all provenance fields', async () => {

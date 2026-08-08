@@ -40,4 +40,18 @@ describe('Studionet RPC proxy', () => {
     expect(fetchMock).not.toHaveBeenCalled()
     expect(res.status).toHaveBeenCalledWith(405)
   })
+
+  it('returns rate limits without consuming the quota with retries', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(
+      '{"jsonrpc":"2.0","id":1,"error":{"code":-32029,"message":"Rate limit exceeded"}}',
+      { status: 429, headers: { 'content-type': 'application/json' } },
+    ))
+    vi.stubGlobal('fetch', fetchMock)
+    const res = response()
+
+    await handler({ method: 'POST', body: { jsonrpc: '2.0', id: 1, method: 'gen_call', params: [] } }, res)
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(res.status).toHaveBeenCalledWith(429)
+  })
 })

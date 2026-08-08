@@ -23,7 +23,7 @@ export default async function handler(req: any, res: any) {
         signal: AbortSignal.timeout(20_000),
       })
       lastResponse = upstream
-      if (upstream.ok || (upstream.status < 500 && upstream.status !== 429)) {
+      if (upstream.ok || upstream.status < 500) {
         res.setHeader('Cache-Control', 'no-store')
         res.setHeader('Content-Type', upstream.headers.get('content-type') || 'application/json')
         return res.status(upstream.status).send(await upstream.text())
